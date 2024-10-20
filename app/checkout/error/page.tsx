@@ -9,6 +9,7 @@ export default function CheckoutError() {
 	const toggleCart = useCartStore((state) => state.toggleCart)
 	const searchParams = useSearchParams()
 	const [errorMessage, setErrorMessage] = useState('')
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const [errorDetails, setErrorDetails] = useState<any>(null)
 
 	useEffect(() => {

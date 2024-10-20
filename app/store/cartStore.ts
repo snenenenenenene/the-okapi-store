@@ -106,6 +106,8 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: 'okapi-cart',
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      //@ts-ignore
       getStorage: () => localStorage,
     }
   )

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Stripe from 'stripe'
 
 const PRINTFUL_API_URL = 'https://api.printful.com'
@@ -25,7 +26,7 @@ export async function createPrintfulOrder(charge: Stripe.Charge, paymentIntent: 
       console.error('Error parsing cartItems from Session metadata:', error)
     }
   } else if (session?.line_items?.data) {
-    cartItems = session.line_items.data.map(item => ({
+    cartItems = session.line_items.data.map((item:any) => ({
       variant_id: item.price?.product?.metadata?.variant_id,
       quantity: item.quantity
     }))

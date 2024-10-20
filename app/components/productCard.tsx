@@ -1,16 +1,13 @@
-import Image from 'next/image'
-import { useCartStore } from '@/store/cartStore'
-
 interface Product {
   id: string
   name: string
   price: number
   image: string
   variant_id: number // Add this line
+  currency?: string
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const addItem = useCartStore((state) => state.addItem)
 
   console.log(product)
   return (

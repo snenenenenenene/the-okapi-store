@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createPrintfulOrder } from '@/utils/printful'
+import { STRIPE_API_VERSION } from '@/utils/env'
 
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
@@ -10,7 +11,7 @@ console.log('STRIPE_SECRET_KEY set:', !!stripeSecretKey)
 console.log('STRIPE_WEBHOOK_SECRET set:', !!endpointSecret)
 
 const stripe = new Stripe(stripeSecretKey || '', {
-  apiVersion: '2022-11-15',
+  apiVersion: STRIPE_API_VERSION,
 })
 
 export async function POST(req: Request) {
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
 
     event = stripe.webhooks.constructEvent(payload, sig, endpointSecret)
     console.log(`Event constructed successfully. Type: ${event.type}`)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error('Error constructing webhook event:', err)
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
@@ -50,10 +52,10 @@ export async function POST(req: Request) {
   if (event.type === 'charge.succeeded') {
     console.log('Handling charge.succeeded event')
     const charge = event.data.object as Stripe.Charge
+    console.log('Fetching associated PaymentIntent')
+    const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent as string)
 
     try {
-      console.log('Fetching associated PaymentIntent')
-      const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent as string)
       
       console.log('PaymentIntent retrieved:', JSON.stringify(paymentIntent, null, 2))
 

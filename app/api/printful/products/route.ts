@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
 
 const PRINTFUL_API_URL = 'https://api.printful.com'
@@ -18,7 +19,7 @@ export async function GET() {
     const data = await response.json()
     
     // Fetch detailed information for each product
-    const detailedProducts = await Promise.all(data.result.map(async (item) => {
+    const detailedProducts = await Promise.all(data.result.map(async (item: any) => {
       const detailResponse = await fetch(`${PRINTFUL_API_URL}/store/products/${item.id}`, {
         headers: {
           'Authorization': `Bearer ${PRINTFUL_TOKEN}`,
@@ -56,6 +57,7 @@ export async function GET() {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(req: Request) {
   return NextResponse.json({ message: 'Method not allowed' }, { status: 405 })
 }

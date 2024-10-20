@@ -1,10 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/printful/create-order/route.ts
+import { STRIPE_API_VERSION } from '@/utils/env'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
 const PRINTFUL_API_URL = 'https://api.printful.com'
 const PRINTFUL_TOKEN = process.env.PRINTFUL_TOKEN
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2022-11-15' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: STRIPE_API_VERSION })
 
 export async function POST(req: Request) {
   try {

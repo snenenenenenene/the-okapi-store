@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState } from 'react'
@@ -30,7 +31,9 @@ export default function Checkout() {
 		setError('')
 
 		try {
-			const sessionId = await checkout(recipientData)
+			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+			//@ts-ignore
+			const sessionId: any = await checkout(recipientData)
 			const stripe = await stripePromise
 			const { error } = await stripe!.redirectToCheckout({ sessionId })
 

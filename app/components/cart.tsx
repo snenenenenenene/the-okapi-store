@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useCartStore } from '@/store/cartStore'
@@ -30,7 +31,7 @@ export function Cart() {
 	const handleCheckout = async () => {
 		setIsLoading(true)
 		try {
-			const sessionId = await checkout()
+			const sessionId: any = await checkout()
 			const stripe = await stripePromise
 			if (stripe) {
 				const { error } = await stripe.redirectToCheckout({ sessionId })

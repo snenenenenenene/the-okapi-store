@@ -16,7 +16,7 @@ export default function CheckoutCancel() {
 			<h1 className="text-3xl font-bold mb-4 text-error">Checkout Cancelled</h1>
 			<p className="text-lg mb-8">
 				Your checkout process was cancelled or encountered an error.
-				Don't worry, your cart items are still saved.
+				Don&quot;t worry, your cart items are still saved.
 			</p>
 			<div className="flex justify-center space-x-4">
 				<button

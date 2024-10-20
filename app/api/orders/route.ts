@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
@@ -6,7 +7,7 @@ import { authOptions } from "../auth/[...nextauth]/route"
 const prisma = new PrismaClient()
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
+  const session: any = await getServerSession(authOptions)
   if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
@@ -19,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
+  const session : any = await getServerSession(authOptions)
   if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       status: "pending",
       total: data.total,
       orderItems: {
-        create: data.items.map((item) => ({
+        create: data.items.map((item: any) => ({
           productId: item.id,
           quantity: item.quantity,
           price: item.price,

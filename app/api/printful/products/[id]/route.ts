@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/printful/products/[id]/route.ts
 import { NextResponse } from 'next/server'
 

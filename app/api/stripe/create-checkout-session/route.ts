@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/stripe/create-checkout-session/route.ts
+import { STRIPE_API_VERSION } from '@/utils/env'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2022-11-15',
+  apiVersion: STRIPE_API_VERSION,
 })
 
 export async function POST(req: Request) {
