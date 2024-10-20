@@ -6,25 +6,25 @@ import { Header } from "./components/header";
 import { Footer } from "./components/footer";
 
 const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
+  src: "/fonts/GeistVF.woff",
   variable: "--font-geist-sans",
   weight: "100 900",
 });
 
 const remindSerif = localFont({
-  src: "./fonts/Remind.ttf",
+  src: "/fonts/Remind.ttf",
   variable: "--font-remind-serif",
   weight: "100 900",
 });
 
 const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
+  src: "/fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
 });
 
 const integralCFMedium = localFont({
-  src: "./fonts/integralcf-medium.otf",
+  src: "/fonts/integralcf-medium.otf",
   variable: "--font-integral-medium",
   weight: "400",
 });
