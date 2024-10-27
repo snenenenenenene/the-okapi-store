@@ -24,7 +24,7 @@ const geistMono = localFont({
 });
 
 const integralCFMedium = localFont({
-  src: "./fonts/integralcf-medium.otf",
+  src: "./fonts/Integralcf-medium.otf",
   variable: "--font-integral-medium",
   weight: "400",
 });
