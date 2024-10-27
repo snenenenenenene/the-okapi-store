@@ -27,7 +27,7 @@ export function Header() {
 				</div>
 				<div className="flex-none">
 					<ul className="menu menu-horizontal px-1 flex items-center">
-						<li><Link href="/products" className="hover:text-primary mr-2">Shop</Link></li>
+						<li><Link href="/" className="hover:text-primary mr-2">Shop</Link></li>
 						<li><Link href="/about" className="hover:text-primary">About</Link></li>
 						<li>
 							<button className="btn btn-ghost btn-circle">
@@ -58,8 +58,8 @@ export function Header() {
 										</div>
 									</label>
 									<ul tabIndex={0} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
-										<li><a className="justify-between">Profile</a></li>
-										<li><a>Settings</a></li>
+										{/* <li><a className="justify-between">Profile</a></li> */}
+										{/* <li><a>Settings</a></li> */}
 										<li><a onClick={() => signOut()}>Logout</a></li>
 									</ul>
 								</div>
