@@ -21,16 +21,25 @@ const item = {
 
 export default function ReturnsPage() {
 	return (
-		<div className="min-h-screen font-satoshi">
+		<div className="min-h-screen bg-base-100">
 			{/* Hero Section */}
-			<div className="bg-gray-50">
-				<div className="container mx-auto px-6 py-16">
-					<h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+			<div className="bg-primary/5">
+				<div className="container mx-auto px-6 py-24">
+					<motion.h1
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						className="text-4xl md:text-6xl font-serif mb-6 text-neutral"
+					>
 						Returns &amp; Exchanges
-					</h1>
-					<p className="text-xl text-gray-600 max-w-2xl">
-						We want you to be completely satisfied with your purchase. Learn about our return policy and process below.
-					</p>
+					</motion.h1>
+					<motion.p
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.2 }}
+						className="text-xl font-light text-neutral/80 max-w-2xl"
+					>
+						We want you to love your Okapi items. If you&apos;re not completely satisfied, we&apos;re here to help.
+					</motion.p>
 				</div>
 			</div>
 
@@ -39,118 +48,183 @@ export default function ReturnsPage() {
 				variants={container}
 				initial="hidden"
 				animate="show"
-				className="container mx-auto px-6 py-16"
+				className="container mx-auto px-6 py-24"
 			>
-				<motion.div variants={item} className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-					<div className="bg-white p-6 rounded-lg border border-gray-200">
-						<Truck className="w-8 h-8 text-gray-900 mb-4" />
-						<h3 className="font-bold text-lg mb-2">Free Returns</h3>
-						<p className="text-gray-600">Return shipping is free for customers in Belgium, Netherlands, and Luxembourg.</p>
+				<motion.div
+					variants={item}
+					className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-24"
+				>
+					<div className="group hover:bg-primary/5 p-8 rounded-lg transition-all duration-300">
+						<Truck className="w-8 h-8 text-primary mb-6 group-hover:scale-110 transition-transform duration-300" />
+						<h3 className="font-serif text-lg mb-3 text-neutral">Free Returns</h3>
+						<p className="text-neutral/70">Complimentary return shipping for Benelux customers.</p>
 					</div>
 
-					<div className="bg-white p-6 rounded-lg border border-gray-200">
-						<RefreshCw className="w-8 h-8 text-gray-900 mb-4" />
-						<h3 className="font-bold text-lg mb-2">Easy Exchange</h3>
-						<p className="text-gray-600">Wrong size? We&apos;ll help you get the right fit with our easy exchange process.</p>
+					<div className="group hover:bg-primary/5 p-8 rounded-lg transition-all duration-300">
+						<RefreshCw className="w-8 h-8 text-primary mb-6 group-hover:scale-110 transition-transform duration-300" />
+						<h3 className="font-serif text-lg mb-3 text-neutral">Simple Exchanges</h3>
+						<p className="text-neutral/70">Need a different size? We&apos;ll make it effortless.</p>
 					</div>
 
-					<div className="bg-white p-6 rounded-lg border border-gray-200">
-						<Clock className="w-8 h-8 text-gray-900 mb-4" />
-						<h3 className="font-bold text-lg mb-2">30-Day Window</h3>
-						<p className="text-gray-600">You have 30 days from delivery to initiate a return or exchange.</p>
+					<div className="group hover:bg-primary/5 p-8 rounded-lg transition-all duration-300">
+						<Clock className="w-8 h-8 text-primary mb-6 group-hover:scale-110 transition-transform duration-300" />
+						<h3 className="font-serif text-lg mb-3 text-neutral">30-Day Window</h3>
+						<p className="text-neutral/70">One month to ensure you&apos;re completely satisfied.</p>
 					</div>
 
-					<div className="bg-white p-6 rounded-lg border border-gray-200">
-						<AlertCircle className="w-8 h-8 text-gray-900 mb-4" />
-						<h3 className="font-bold text-lg mb-2">Quality Guarantee</h3>
-						<p className="text-gray-600">If you receive a defective item, we&apos;ll replace it or provide a full refund.</p>
+					<div className="group hover:bg-primary/5 p-8 rounded-lg transition-all duration-300">
+						<AlertCircle className="w-8 h-8 text-primary mb-6 group-hover:scale-110 transition-transform duration-300" />
+						<h3 className="font-serif text-lg mb-3 text-neutral">Quality Promise</h3>
+						<p className="text-neutral/70">Full refund or replacement for any defects.</p>
 					</div>
 				</motion.div>
 
 				{/* Detailed Policy */}
-				<div className="max-w-3xl mx-auto">
-					<motion.div variants={item} className="prose max-w-none">
-						<h2 className="text-2xl font-bold mb-6">Return Policy Details</h2>
+				<div className="max-w-4xl mx-auto space-y-24">
+					<motion.section variants={item} className="space-y-8">
+						<h2 className="text-2xl font-serif text-neutral">Return Policy Details</h2>
 
-						<div className="mb-8">
-							<h3 className="text-xl font-semibold mb-4">Eligible Items</h3>
-							<p className="text-gray-600 mb-4">
-								To be eligible for a return, your item must be:
-							</p>
-							<ul className="list-disc pl-6 text-gray-600 space-y-2">
-								<li>Unused and in the same condition that you received it</li>
-								<li>In the original packaging</li>
-								<li>Unworn, unwashed, and undamaged</li>
-								<li>Accompanied by the original receipt or proof of purchase</li>
-							</ul>
-						</div>
+						<div className="grid md:grid-cols-2 gap-12">
+							<div className="space-y-4">
+								<h3 className="font-serif text-lg text-neutral">Eligible Items</h3>
+								<ul className="space-y-2 text-neutral/70">
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Unused and in original condition
+									</li>
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Original packaging intact
+									</li>
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Unworn and undamaged
+									</li>
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Proof of purchase included
+									</li>
+								</ul>
+							</div>
 
-						<div className="mb-8">
-							<h3 className="text-xl font-semibold mb-4">Non-Returnable Items</h3>
-							<ul className="list-disc pl-6 text-gray-600 space-y-2">
-								<li>Custom or personalized orders</li>
-								<li>Items marked as final sale</li>
-								<li>Personal care items</li>
-								<li>Items with signs of wear or washing</li>
-							</ul>
+							<div className="space-y-4">
+								<h3 className="font-serif text-lg text-neutral">Non-Returnable Items</h3>
+								<ul className="space-y-2 text-neutral/70">
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Custom or personalized orders
+									</li>
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Final sale items
+									</li>
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Items showing wear or washing
+									</li>
+								</ul>
+							</div>
 						</div>
+					</motion.section>
 
-						<div className="mb-8">
-							<h3 className="text-xl font-semibold mb-4">Return Process</h3>
-							<ol className="list-decimal pl-6 text-gray-600 space-y-4">
-								<li>
-									<strong>Initiate Your Return</strong>
-									<p>Contact us at returns@okapistore.com with your order number and reason for return.</p>
-								</li>
-								<li>
-									<strong>Receive Return Authorization</strong>
-									<p>We&apos;ll send you a return authorization and shipping label (if applicable).</p>
-								</li>
-								<li>
-									<strong>Package Your Return</strong>
-									<p>Securely package the item(s) in their original condition with all tags attached.</p>
-								</li>
-								<li>
-									<strong>Ship Your Return</strong>
-									<p>Use the provided shipping label or send to our returns address.</p>
-								</li>
-								<li>
-									<strong>Refund Processing</strong>
-									<p>Once received and inspected, we&apos;ll process your refund within 5-7 business days.</p>
-								</li>
-							</ol>
+					<motion.section variants={item} className="space-y-8">
+						<h2 className="text-2xl font-serif text-neutral">Return Process</h2>
+						<div className="grid gap-8">
+							{[
+								{
+									step: "01",
+									title: "Initiate Return",
+									description: "Email okapistore@gmail.com with your order number"
+								},
+								{
+									step: "02",
+									title: "Receive Label",
+									description: "We'll send your return authorization and shipping label"
+								},
+								{
+									step: "03",
+									title: "Package Items",
+									description: "Securely pack items in their original condition"
+								},
+								{
+									step: "04",
+									title: "Ship Return",
+									description: "Drop off package using provided shipping label"
+								},
+								{
+									step: "05",
+									title: "Refund",
+									description: "Receive refund within 5-7 business days of receipt"
+								}
+							].map((item) => (
+								<div key={item.step} className="flex gap-8 items-start p-6 hover:bg-primary/5 rounded-lg transition-all duration-300">
+									<span className="font-serif text-4xl text-primary/30">{item.step}</span>
+									<div>
+										<h3 className="font-serif text-lg text-neutral mb-2">{item.title}</h3>
+										<p className="text-neutral/70">{item.description}</p>
+									</div>
+								</div>
+							))}
 						</div>
+					</motion.section>
 
-						<div className="mb-8">
-							<h3 className="text-xl font-semibold mb-4">Exchanges</h3>
-							<p className="text-gray-600 mb-4">
-								For exchanges, follow the same process as returns but specify the new size or variant you&apos;d like.
-								We&apos;ll process the exchange as soon as we receive your original item.
-							</p>
-						</div>
+					<motion.section variants={item} className="space-y-8">
+						<h2 className="text-2xl font-serif text-neutral">Shipping Information</h2>
+						<div className="grid md:grid-cols-2 gap-12">
+							<div className="space-y-4">
+								<h3 className="font-serif text-lg text-neutral">Free Returns</h3>
+								<p className="text-neutral/70">
+									We offer free return shipping for all orders within:
+								</p>
+								<ul className="space-y-2 text-neutral/70">
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Belgium
+									</li>
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Netherlands
+									</li>
+									<li className="flex items-center gap-2">
+										<div className="w-1 h-1 rounded-full bg-primary"></div>
+										Luxembourg
+									</li>
+								</ul>
+							</div>
 
-						<div className="mb-8">
-							<h3 className="text-xl font-semibold mb-4">Shipping Costs</h3>
-							<ul className="list-disc pl-6 text-gray-600 space-y-2">
-								<li>Free return shipping for BE, NL, and LUX customers</li>
-								<li>Customers outside these countries are responsible for return shipping costs</li>
-								<li>We cover shipping costs for exchanges and defective items</li>
-							</ul>
+							<div className="space-y-4">
+								<h3 className="font-serif text-lg text-neutral">International Returns</h3>
+								<p className="text-neutral/70">
+									Customers outside Benelux are responsible for return shipping costs.
+									We recommend using a tracked service.
+								</p>
+							</div>
 						</div>
+					</motion.section>
 
-						<div className="bg-gray-50 p-6 rounded-lg mt-8">
-							<h3 className="text-xl font-semibold mb-4">Need Help?</h3>
-							<p className="text-gray-600 mb-4">
-								If you have any questions about our return policy or need assistance with a return,
-								please don&apos;t hesitate to contact us:
-							</p>
-							<ul className="text-gray-600 space-y-2">
-								<li>Email: support@okapistore.com</li>
-								<li>Phone: &#43;32 (0) 123 456 789</li>
-								<li>Hours: Monday-Friday, 9:00-17:00 CET</li>
-							</ul>
+					<motion.section
+						variants={item}
+						className="bg-primary/5 p-12 rounded-lg space-y-6"
+					>
+						<h2 className="text-2xl font-serif text-neutral">Need Assistance?</h2>
+						<p className="text-neutral/70 max-w-2xl">
+							Our customer service team is here to help with any questions about returns or exchanges.
+						</p>
+						<div className="grid md:grid-cols-3 gap-8">
+							<div>
+								<p className="font-serif text-neutral">Email</p>
+								<p className="text-neutral/70">okapistore@gmail.com</p>
+							</div>
+							<div>
+								<p className="font-serif text-neutral">Phone</p>
+								<p className="text-neutral/70">&#43;32 (0) 470 976 709</p>
+							</div>
+							<div>
+								<p className="font-serif text-neutral">Hours</p>
+								<p className="text-neutral/70">Mon-Fri, 9:00-17:00 CET</p>
+							</div>
 						</div>
-					</motion.div>
+					</motion.section>
 				</div>
 			</motion.div>
 		</div>
