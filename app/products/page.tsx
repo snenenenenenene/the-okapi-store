@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 'use client'
 
@@ -11,7 +12,7 @@ export default function ProductsPage() {
 	const [selectedTag, setSelectedTag] = useState('All')
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
 	const [allTags, setAllTags] = useState<string[]>(['All'])
-	const products = useCartStore((state) => state.products)
+	const products: any = useCartStore((state) => state.products)
 	const fetchProducts = useCartStore((state) => state.fetchProducts)
 
 	useEffect(() => {
@@ -25,9 +26,9 @@ export default function ProductsPage() {
 		setAllTags(tags)
 
 		if (selectedTag === 'All') {
-			setFilteredProducts(products)
+			setFilteredProducts(products as any)
 		} else {
-			setFilteredProducts(products.filter(product => product.tags.includes(selectedTag)))
+			setFilteredProducts(products.filter(product => product.tags.includes(selectedTag)) as any)
 		}
 	}, [selectedTag, products])
 
