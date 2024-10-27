@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface Product {
   id: string;
@@ -30,8 +30,8 @@ interface Variant {
 export default function ProductDetail({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  // const [isZoomed, setIsZoomed] = useState(false);
+  // const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLDivElement>(null);
   const addToCart = useCartStore((state) => state.addToCart);
 
@@ -75,24 +75,24 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
     }
   };
 
-  const handleImageHover = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (imageRef.current) {
-      const rect = imageRef.current.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+  // const handleImageHover = (event: React.MouseEvent<HTMLDivElement>) => {
+  //   if (imageRef.current) {
+  //     const rect = imageRef.current.getBoundingClientRect();
+  //     const x = event.clientX - rect.left;
+  //     const y = event.clientY - rect.top;
 
-      // Get the relative position of the mouse within the image container (0 to 1)
-      const xPos = x / rect.width;
-      const yPos = y / rect.height;
+  //     // Get the relative position of the mouse within the image container (0 to 1)
+  //     // const xPos = x / rect.width;
+  //     // const yPos = y / rect.height;
 
-      setZoomPosition({ x: xPos, y: yPos });
-      setIsZoomed(true);
-    }
-  };
+  //     // setZoomPosition({ x: xPos, y: yPos });
+  //     // setIsZoomed(true);
+  //   }
+  // };
 
-  const handleImageLeave = () => {
-    setIsZoomed(false);
-  };
+  // const handleImageLeave = () => {
+  //   // setIsZoomed(false);
+  // };
 
   return (
     <motion.div
@@ -109,8 +109,8 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
             animate={{ scale: 1 }}
             transition={{ duration: 0.5 }}
             className="relative overflow-hidden bg-base-100"
-            onMouseMove={handleImageHover}
-            onMouseLeave={handleImageLeave}
+          // onMouseMove={handleImageHover}
+          // onMouseLeave={handleImageLeave}
           // style={{
           //   cursor: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='white' /%3E%3Cpath d='M10 10 L22 22 M22 10 L10 22' stroke='black' stroke-width='2'/%3E%3C/svg%3E") 16 16, auto`
           // }}
