@@ -29,11 +29,11 @@ export function Header() {
 					<ul className="menu menu-horizontal px-1 flex items-center">
 						<li><Link href="/" className="hover:text-primary mr-2">Shop</Link></li>
 						<li><Link href="/about" className="hover:text-primary">About</Link></li>
-						<li>
+						{/* <li>
 							<button className="btn btn-ghost btn-circle">
 								<Search size={20} />
 							</button>
-						</li>
+						</li> */}
 						<li>
 							<button className="btn btn-ghost btn-circle" onClick={toggleCart}>
 								<div className="indicator">
