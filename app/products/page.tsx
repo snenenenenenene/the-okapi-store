@@ -28,7 +28,7 @@ export default function ProductsPage() {
 		if (selectedTag === 'All') {
 			setFilteredProducts(products as any)
 		} else {
-			setFilteredProducts(products.filter(product => product.tags.includes(selectedTag)) as any)
+			setFilteredProducts(products.filter((product: { tags: string | string[] }) => product.tags.includes(selectedTag)) as any)
 		}
 	}, [selectedTag, products])
 
@@ -51,6 +51,7 @@ export default function ProductsPage() {
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
 					{filteredProducts.map((product) => (
 						<Link href={`/products/${product.id}`} key={product.id}>
+							{/* @ts-ignore */}
 							<ProductCard product={product} />
 						</Link>
 					))}
