@@ -9,16 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-geist-sans)"],
-        mono: ["var(--font-geist-mono)"],
-        intergral: ["var(--font-integral-medium)"],
-        black: ["var(--font-remind-serif)"],
-        normal: ["var(--font-geist-sans)"],
-        light: ["var(--font-geist-sans)"],
-        bold: ["var(--font-integral-medium)"],
-        serif: ["var(--font-remind-serif)"],
-        medium: ["var(--font-integral-medium)"],
-        regular: ["var(--font-geist-sans)"],
+        sans: ["Satoshi"],
+        mono: ["Inter Tight"],
+        intergral: ["Inter Tight"],
+        black: ["Inter Tight"],
+        normal: ["Satoshi"],
+        light: ["Satoshi"],
+        bold: ["Inter Tight"],
+        serif: ["Inter Tight"],
+        medium: ["Inter Tight"],
+        regular: ["Satoshi"],
       },
       colors: {
         background: "var(--background)",
