@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -19,6 +20,7 @@ export default function ProductsPage() {
 
 	useEffect(() => {
 		console.log(products)
+		// @ts-ignore
 		const tags = ['All', ...new Set(products.flatMap(product => product.tags))]
 		setAllTags(tags)
 
