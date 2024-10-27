@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useCartStore } from '@/store/cartStore'
 
-export default function CheckoutError() {
+function CheckoutErrorContent() {
 	const toggleCart = useCartStore((state) => state.toggleCart)
 	const searchParams = useSearchParams()
 	const [errorMessage, setErrorMessage] = useState('')
@@ -64,10 +64,7 @@ export default function CheckoutError() {
 				We apologize for the inconvenience. Please try again or contact our support team if the problem persists.
 			</p>
 			<div className="flex justify-center space-x-4">
-				<button
-					onClick={toggleCart}
-					className="btn btn-primary"
-				>
+				<button onClick={toggleCart} className="btn btn-primary">
 					Return to Cart
 				</button>
 				<Link href="/contact" className="btn btn-outline">
@@ -75,5 +72,17 @@ export default function CheckoutError() {
 				</Link>
 			</div>
 		</div>
+	)
+}
+
+export default function CheckoutError() {
+	return (
+		<Suspense fallback={
+			<div className="container mx-auto px-4 py-8 text-center">
+				<h1 className="text-3xl font-bold mb-4">Loading...</h1>
+			</div>
+		}>
+			<CheckoutErrorContent />
+		</Suspense>
 	)
 }
