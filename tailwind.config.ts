@@ -9,6 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
+        satoshi: ["Satoshi"],
+        inter: ["Inter Tight"],
         sans: ["Satoshi"],
         mono: ["Inter Tight"],
         intergral: ["Inter Tight"],

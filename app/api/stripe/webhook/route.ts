@@ -1,97 +1,166 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createPrintfulOrder } from '@/utils/printful'
-import { STRIPE_API_VERSION } from '@/utils/env'
+import { sendOrderConfirmationEmail } from '@/utils/emailService'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../../auth/[...nextauth]/options'
 
-// Initialize Stripe
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
+import prisma from '@/lib/prisma'
 
-console.log('STRIPE_SECRET_KEY set:', !!stripeSecretKey)
-console.log('STRIPE_WEBHOOK_SECRET set:', !!endpointSecret)
-
-const stripe = new Stripe(stripeSecretKey || '', {
-  apiVersion: STRIPE_API_VERSION,
-})
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-06-20'
+});
 
 export async function POST(req: Request) {
-  console.log("Webhook received")
-  
-  const payload = await req.text()
-  const sig = req.headers.get('stripe-signature')
+  const payload = await req.text();
+  const signature = req.headers.get('stripe-signature');
 
-  console.log('Stripe signature received:', !!sig)
-
-  if (!sig) {
-    console.error('No Stripe signature found in request headers')
-    return NextResponse.json({ error: 'No Stripe signature found' }, { status: 400 })
+  if (!signature) {
+    return NextResponse.json({ error: 'No signature found' }, { status: 400 });
   }
 
-  if (!endpointSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET is not set')
-    return NextResponse.json({ error: 'Webhook secret is not configured' }, { status: 500 })
-  }
-
-  let event: Stripe.Event
+  let event: Stripe.Event;
 
   try {
-    console.log('Constructing event with:')
-    console.log('Payload length:', payload.length)
-    console.log('Signature length:', sig.length)
-    console.log('Endpoint secret length:', endpointSecret.length)
-
-    event = stripe.webhooks.constructEvent(payload, sig, endpointSecret)
-    console.log(`Event constructed successfully. Type: ${event.type}`)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    event = stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
   } catch (err: any) {
-    console.error('Error constructing webhook event:', err)
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
-  // Handle the charge.succeeded event
-  if (event.type === 'charge.succeeded') {
-    console.log('Handling charge.succeeded event')
-    const charge = event.data.object as Stripe.Charge
-    console.log('Fetching associated PaymentIntent')
-    const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent as string)
-
-    try {
+  try {
+    if (event.type === 'charge.succeeded') {
+      const charge = event.data.object as Stripe.Charge;
+      const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent as string);
       
-      console.log('PaymentIntent retrieved:', JSON.stringify(paymentIntent, null, 2))
-
-      // Fetch the associated Session if cartItems are not in PaymentIntent metadata
-      let session = null
+      let session = null;
       if (!paymentIntent.metadata.cartItems) {
-        console.log('cartItems not found in PaymentIntent metadata, fetching associated Session')
         const sessions = await stripe.checkout.sessions.list({
           payment_intent: paymentIntent.id,
           limit: 1,
-        })
-        session = sessions.data[0]
-        console.log('Associated Session:', JSON.stringify(session, null, 2))
+        });
+        session = sessions.data[0];
       }
 
-      console.log('Creating Printful order')
-      const printfulOrder = await createPrintfulOrder(charge, paymentIntent, session)
-      console.log('Printful order created successfully:', JSON.stringify(printfulOrder, null, 2))
+      // Create Printful order
+      const printfulOrder = await createPrintfulOrder(charge, paymentIntent, session);
 
-      return NextResponse.json({ received: true, printfulOrder })
-    } catch (error: any) {
-      console.error('Error processing charge or creating Printful order:', error)
-      console.error('Charge details:', JSON.stringify(charge, null, 2))
-      console.error('PaymentIntent details:', JSON.stringify(paymentIntent, null, 2))
+      // Try to get current logged in user first
+      const serverSession = await getServerSession(authOptions);
+      let user = null;
+
+      if (serverSession?.user?.email) {
+        user = await prisma.user.findUnique({
+          where: { email: serverSession.user.email }
+        });
+      }
+
+      // If no logged in user, try to find or create by email from the charge
+      if (!user) {
+        const email = charge.billing_details.email || session?.customer_details?.email;
+        if (email) {
+          user = await prisma.user.findUnique({
+            where: { email }
+          });
+
+          if (!user) {
+            user = await prisma.user.create({
+              data: {
+                email: email,
+                name: charge.billing_details.name || session?.customer_details?.name || 'Guest User',
+              }
+            });
+          }
+        } else {
+          // Create guest user if no email available
+          user = await prisma.user.create({
+            data: {
+              email: `guest_${Date.now()}@example.com`,
+              name: 'Guest User',
+            }
+          });
+        }
+      }
+
+      // Parse cart items
+      const cartItems = JSON.parse(session?.metadata?.cartItems || paymentIntent.metadata.cartItems);
+      
+      // Ensure all products exist
+      await Promise.all(
+        cartItems.map((item: any) =>
+          prisma.product.upsert({
+            where: { id: item.id },
+            update: {},
+            create: {
+              id: item.id,
+              name: item.name,
+              description: item.name,
+              price: item.price,
+              image: item.image,
+              inStock: 1
+            }
+          })
+        )
+      );
+
+      // Create the order
+      const order = await prisma.order.create({
+        data: {
+          userId: user.id,
+          status: 'processing',
+          total: charge.amount / 100,
+          stripeSessionId: session?.id,
+          stripePaymentId: paymentIntent.id,
+          printfulId: printfulOrder?.id,
+          orderItems: {
+            create: cartItems.map((item: any) => ({
+              quantity: item.quantity,
+              price: item.price,
+              product: {
+                connect: {
+                  id: item.id
+                }
+              }
+            }))
+          }
+        },
+        include: {
+          orderItems: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+
+      // Send confirmation email
+      const email = charge.billing_details.email || session?.customer_details?.email;
+      if (email) {
+        await sendOrderConfirmationEmail(
+          email,
+          order.id,
+          order.orderItems,
+          order.total,
+          printfulOrder
+        );
+      }
+
       return NextResponse.json({ 
-        error: 'Failed to process charge or create Printful order', 
-        details: error.message, 
-        charge: charge,
-        paymentIntent: paymentIntent
-      }, { status: 500 })
+        received: true, 
+        orderId: order.id,
+        printfulOrder 
+      });
     }
-  } else {
-    console.log(`Unhandled event type: ${event.type}`)
-  }
 
-  // Return a response to acknowledge receipt of the event
-  return NextResponse.json({ received: true })
+    return NextResponse.json({ received: true });
+  } catch (error: any) {
+    console.error('Error processing webhook:', error);
+    return NextResponse.json({ 
+      error: 'Failed to process webhook', 
+      details: error.message 
+    }, { status: 500 });
+  }
 }

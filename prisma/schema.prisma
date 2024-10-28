@@ -1,13 +1,11 @@
-// This is your Prisma schema file for the The Okapi Store
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("POSTGRES_PRISMA_URL") // uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+  url      = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 model Account {
@@ -21,8 +19,8 @@ model Account {
   expires_at         Int?
   token_type         String?
   scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
+  id_token          String?  @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -36,56 +34,58 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   @@index([userId])
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  role          String    @default("user")
-  credits       Int       @default(0)
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  orders        Order[]
-  reviews       Review[]
-}
+  id                String    @id @default(cuid())
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
+  role              String    @default("user")
+  credits           Int       @default(0)
+  accounts          Account[]
+  sessions          Session[]
+  orders            Order[]
+  reviews           Review[]
 
-model VerificationToken {
-  id         String   @id @default(cuid())
-  identifier String
-  token      String   @unique
-  expires    DateTime
+  // Remove updatedAt from automatically managed fields
+  createdAt         DateTime  @default(now())
 
-  @@unique([identifier, token])
-}
-
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  price       Float
-  image       String
-  category    String
-  inStock     Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orderItems  OrderItem[]
-  reviews     Review[]
+  @@index([email])
 }
 
 model Order {
-  id        String   @id @default(cuid())
-  userId    String
-  status    String
-  total     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  userId            String
+  status            String   @default("pending")
+  total             Float
   
-  user      User     @relation(fields: [userId], references: [id])
-  orderItems OrderItem[]
+  // Stripe Data
+  stripeSessionId    String?  @unique
+  stripePaymentId    String?  @unique
+  
+  // Fulfillment Data
+  printfulId         String?
+  printfulStatus     String?
+  
+  // Shipping Data
+  trackingNumber     String?
+  trackingUrl        String?
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id])
+  orderItems        OrderItem[]
+
+  @@index([userId])
+  @@index([stripeSessionId])
+  @@index([stripePaymentId])
 }
 
 model OrderItem {
@@ -97,6 +97,22 @@ model OrderItem {
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  image       String
+  inStock     Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
+  reviews     Review[]
 }
 
 model Review {
@@ -110,4 +126,16 @@ model Review {
 
   user    User    @relation(fields: [userId], references: [id])
   product Product @relation(fields: [productId], references: [id])
+
+  @@index([userId])
+  @@index([productId])
+}
+
+model VerificationToken {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

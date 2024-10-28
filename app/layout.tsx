@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="okapilight">
       <body
-        className={`antialiased bg-base-100 text-neutral flex flex-col min-h-screen`}
+        className={`antialiased font-[Satoshi] bg-base-100 text-neutral flex flex-col min-h-screen`}
       >
         <Providers>
           <Header />

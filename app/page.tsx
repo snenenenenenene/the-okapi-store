@@ -2,16 +2,16 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/productCard'
 import { useCartStore } from '@/store/cartStore'
-import { Product } from '@/types/product'
+// import { Product } from '@/types/product'
 
 export default function ProductsPage() {
-  const [selectedTag, setSelectedTag] = useState('All')
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
-  const [allTags, setAllTags] = useState<string[]>(['All'])
+  // const [selectedTag, setSelectedTag] = useState('All')
+  // const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+  // const [allTags, setAllTags] = useState<string[]>(['All'])
   const products: any = useCartStore((state) => state.products)
   const fetchProducts = useCartStore((state) => state.fetchProducts)
 
@@ -19,22 +19,22 @@ export default function ProductsPage() {
     fetchProducts()
   }, [fetchProducts])
 
-  useEffect(() => {
-    console.log(products)
-    // @ts-ignore
-    const tags = ['All', ...new Set(products.flatMap(product => product.tags))]
-    setAllTags(tags)
+  // useEffect(() => {
+  //   console.log(products)
+  //   // @ts-ignore
+  //   // const tags = ['All', ...new Set(products.flatMap(product => product.tags))]
+  //   // setAllTags(tags)
 
-    if (selectedTag === 'All') {
-      setFilteredProducts(products as any)
-    } else {
-      setFilteredProducts(products.filter((product: { tags: string | string[] }) => product.tags.includes(selectedTag)) as any)
-    }
-  }, [selectedTag, products])
+  //   if (selectedTag === 'All') {
+  //     setFilteredProducts(products as any)
+  //   } else {
+  //     setFilteredProducts(products.filter((product: { tags: string | string[] }) => product.tags.includes(selectedTag)) as any)
+  //   }
+  // }, [selectedTag, products])
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-wrap gap-2 mb-8">
+      {/* <div className="flex flex-wrap gap-2 mb-8">
         {allTags.map((tag) => (
           <button
             key={tag}
@@ -44,12 +44,12 @@ export default function ProductsPage() {
             {tag}
           </button>
         ))}
-      </div>
-      {filteredProducts.length === 0 ? (
+      </div> */}
+      {products.length === 0 ? (
         <p className="text-neutral text-center">No products found with this tag.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => (
+          {products.map((product: any) => (
             <Link href={`/products/${product.id}`} key={product.id}>
               {/* @ts-ignore */}
               <ProductCard product={product} />
