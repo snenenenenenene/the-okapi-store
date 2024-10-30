@@ -1,9 +1,9 @@
 'use client'
 
-import { useSession, signIn } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Package, Truck, CheckCircle, AlertCircle, Clock, Calendar, Share2 } from 'lucide-react'
+import { Package, Truck, CheckCircle, AlertCircle, Clock, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -24,11 +24,8 @@ interface Order {
   status: string
   total: number
   orderItems: OrderItem[]
-  printfulId?: string
-  printfulStatus?: string
   trackingNumber?: string
   trackingUrl?: string
-  estimatedDelivery?: string
 }
 
 const statusColors = {
@@ -60,56 +57,32 @@ export default function OrdersPage() {
   const { data: session, status } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [shareTooltip, setShareTooltip] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchOrders = async () => {
-      if (status === 'authenticated') {
-        try {
-          const response = await fetch('/api/orders')
-          if (!response.ok) {
-            throw new Error('Failed to fetch orders')
-          }
-          const data = await response.json()
-          setOrders(data)
-        } catch (error) {
-          console.error('Error fetching orders:', error)
-        } finally {
-          setLoading(false)
+      try {
+        const response = await fetch('/api/orders')
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders')
         }
-      } else {
+        const data = await response.json()
+        console.log('Fetched orders:', data)
+        setOrders(data)
+      } catch (err) {
+        console.error('Error fetching orders:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load orders')
+      } finally {
         setLoading(false)
       }
     }
 
-    fetchOrders()
-  }, [status])
-
-  const handleShare = async (orderId: string) => {
-    const orderUrl = `${window.location.origin}/orders/${orderId}`
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Order #${orderId}`,
-          text: 'Check out my order from The Okapi Store',
-          url: orderUrl
-        })
-      } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') {
-          console.error('Error sharing:', err)
-        }
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(orderUrl)
-        setShareTooltip(orderId)
-        setTimeout(() => setShareTooltip(null), 2000)
-      } catch (err) {
-        console.error('Error copying to clipboard:', err)
-      }
+    if (status === 'authenticated') {
+      fetchOrders()
+    } else if (status === 'unauthenticated') {
+      setLoading(false)
     }
-  }
+  }, [status])
 
   if (loading) {
     return (
@@ -133,6 +106,15 @@ export default function OrdersPage() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-neutral">
+        <h1 className="text-2xl font-serif mb-4">Error loading orders</h1>
+        <p className="text-error mb-4">{error}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-base-100">
       <div className="container mx-auto px-6 py-24">
@@ -144,7 +126,7 @@ export default function OrdersPage() {
           Your Orders
         </motion.h1>
 
-        {!orders || orders.length === 0 ? (
+        {(!orders || orders.length === 0) ? (
           <div className="text-center py-12">
             <h2 className="text-2xl font-serif text-neutral mb-4">No orders yet</h2>
             <Link href="/products" className="btn btn-primary">
@@ -176,41 +158,25 @@ export default function OrdersPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 mt-4 md:mt-0">
+                    <div className="flex items-center gap-2 mt-4 md:mt-0">
                       <div className={`px-3 py-1 rounded-full flex items-center gap-2 ${statusColors[order.status as keyof typeof statusColors]}`}>
                         <StatusIcon status={order.status} />
                         <span className="capitalize">{order.status}</span>
-                      </div>
-                      <div className="relative">
-                        <button
-                          onClick={() => handleShare(order.id)}
-                          className="btn btn-ghost btn-sm"
-                          title="Share order"
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </button>
-                        {shareTooltip === order.id && (
-                          <div className="absolute right-0 -bottom-8 bg-neutral text-base-100 px-2 py-1 rounded text-xs whitespace-nowrap">
-                            Copied to clipboard!
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    {order.orderItems?.map((item) => (
+                    {order.orderItems.map((item) => (
                       <div key={item.id} className="flex items-center gap-4">
-                        {item.product.image && (
-                          <div className="relative w-16 h-16 rounded-lg overflow-hidden">
-                            <Image
-                              src={item.product.image}
-                              alt={item.product.name}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                        )}
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+                          <Image
+                            src={item.product.image}
+                            alt={item.product.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
                         <div className="flex-1">
                           <p className="font-medium text-neutral">{item.product.name}</p>
                         </div>
@@ -248,12 +214,6 @@ export default function OrdersPage() {
                           </a>
                         )}
                       </div>
-                    )}
-
-                    {order.estimatedDelivery && (
-                      <p className="text-sm text-neutral/70 mt-2">
-                        Estimated Delivery: {new Date(order.estimatedDelivery).toLocaleDateString()}
-                      </p>
                     )}
                   </div>
                 </div>

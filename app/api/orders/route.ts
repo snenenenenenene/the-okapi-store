@@ -1,46 +1,77 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { PrismaClient } from "@prisma/client"
-import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "../auth/[...nextauth]/options"
-
-
-const prisma = new PrismaClient()
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../auth/[...nextauth]/options'
+import prisma from '@/lib/prisma'
 
 export async function GET() {
-  const session: any = await getServerSession(authOptions)
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
-  const orders = await prisma.order.findMany({
-    where: { userId: session.user.id },
-    include: { orderItems: { include: { product: true } } },
-  })
-  return NextResponse.json(orders)
-}
+    console.log('Fetching orders for user email:', session.user.email);
 
-export async function POST(req: Request) {
-  const session : any = await getServerSession(authOptions)
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+    // First, find the user
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
 
-  const data = await req.json()
-  const order = await prisma.order.create({
-    data: {
-      userId: session.user.id,
-      status: "pending",
-      total: data.total,
-      orderItems: {
-        create: data.items.map((item: any) => ({
-          productId: item.id,
-          quantity: item.quantity,
-          price: item.price,
-        })),
+    if (!user) {
+      console.log('User not found');
+      return NextResponse.json({ orders: [] });
+    }
+
+    console.log('Found user ID:', user.id);
+
+    // Get all orders where the user is either the owner or has an association
+    const orders = await prisma.order.findMany({
+      where: {
+        OR: [
+          { userId: user.id },
+          {
+            associations: {
+              some: {
+                userId: user.id
+              }
+            }
+          }
+        ]
       },
-    },
-    include: { orderItems: true },
-  })
-  return NextResponse.json(order)
+      include: {
+        orderItems: {
+          include: {
+            product: true
+          }
+        },
+        associations: {
+          include: {
+            user: true
+          }
+        },
+        user: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    console.log(`Found ${orders.length} orders for user ${user.id}`);
+    
+    if (orders.length > 0) {
+      console.log('Sample order IDs:', orders.map(o => o.id));
+    }
+
+    return NextResponse.json(orders);
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch orders' },
+      { status: 500 }
+    );
+  }
 }

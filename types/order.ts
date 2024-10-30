@@ -2,23 +2,33 @@ export interface OrderItem {
 	id: string;
 	quantity: number;
 	price: number;
-	productId: string;
+	product: {
+	  id: string;
+	  name: string;
+	  image: string;
+	};
+  }
+  
+  export interface OrderAssociation {
+	id: string;
+	type: 'CUSTOMER' | 'CREATOR';
+	user: {
+	  id: string;
+	  email: string;
+	  name: string | null;
+	};
   }
   
   export interface Order {
 	id: string;
+	createdAt: string;
 	status: string;
 	total: number;
-	stripeData: {
-	  sessionId: string | null;
-	  paymentIntentId: string | null;
-	};
-	shipping: {
-	  trackingNumber: string | null;
-	  trackingUrl: string | null;
-	};
-	fulfillment: {
-	  printfulId: string | null;
-	  status: string | null;
-	};
+	orderItems: OrderItem[];
+	printfulId?: string;
+	printfulStatus?: string;
+	trackingNumber?: string;
+	trackingUrl?: string;
+	estimatedDelivery?: string;
+	associations: OrderAssociation[];
   }
