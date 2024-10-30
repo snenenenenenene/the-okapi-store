@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { Stripe } from 'stripe'
 
 export async function createOrder({
@@ -110,7 +111,7 @@ export async function createOrder({
     console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       console.error('Prisma Error Code:', error.code);
       console.error('Prisma Error Meta:', error.meta);
     }
@@ -229,7 +230,7 @@ export async function ensureProductExists(productData: {
     console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       console.error('Prisma Error Code:', error.code);
       console.error('Prisma Error Meta:', error.meta);
     }
