@@ -1,50 +1,55 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-'use client'
+// Components/Cart.tsx
+import { formatEuroPrice, standardizePrice } from '@/utils/formatters';
+import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
+import { useCartStore } from '@/store/cartStore';
+import { X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
 
-import { useCartStore } from '@/store/cartStore'
-import Image from 'next/image'
-import { X } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
-import { loadStripe } from '@stripe/stripe-js'
-import { motion, AnimatePresence } from 'framer-motion'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export function Cart() {
-	const { cart, removeFromCart, updateCartItemQuantity, clearCart, toggleCart, getTotalPrice, checkout } = useCartStore()
-	const [isLoading, setIsLoading] = useState(false)
-	const cartRef = useRef<HTMLDivElement>(null)
+	const {
+		cart,
+		removeFromCart,
+		updateCartItemQuantity,
+		clearCart,
+		toggleCart,
+		getTotalPrice,
+		checkout
+	} = useCartStore();
+	const [isLoading, setIsLoading] = useState(false);
+	const cartRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
 			if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
-				toggleCart()
+				toggleCart();
 			}
-		}
+		};
 
-		document.addEventListener('mousedown', handleClickOutside)
-		return () => {
-			document.removeEventListener('mousedown', handleClickOutside)
-		}
-	}, [toggleCart])
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, [toggleCart]);
 
 	const handleCheckout = async () => {
-		setIsLoading(true)
+		setIsLoading(true);
 		try {
-			const sessionId: any = await checkout()
-			const stripe = await stripePromise
+			const sessionId = await checkout();
+			const stripe = await stripePromise;
 			if (stripe) {
-				const { error } = await stripe.redirectToCheckout({ sessionId })
+				const { error } = await stripe.redirectToCheckout({ sessionId });
 				if (error) {
-					console.error('Stripe checkout error:', error)
+					console.error('Stripe checkout error:', error);
 				}
 			}
 		} catch (error) {
-			console.error('Checkout error:', error)
+			console.error('Checkout error:', error);
 		} finally {
-			setIsLoading(false)
+			setIsLoading(false);
 		}
-	}
+	};
 
 	return (
 		<AnimatePresence>
@@ -52,7 +57,7 @@ export function Cart() {
 				initial={{ opacity: 0 }}
 				animate={{ opacity: 1 }}
 				exit={{ opacity: 0 }}
-				className="fixed inset-0 font-medium bg-black bg-opacity-50 z-50 flex justify-end"
+				className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
 			>
 				<motion.div
 					ref={cartRef}
@@ -68,6 +73,7 @@ export function Cart() {
 							<X size={24} />
 						</button>
 					</div>
+
 					{cart.length === 0 ? (
 						<p className="text-neutral">Your cart is empty.</p>
 					) : (
@@ -81,10 +87,16 @@ export function Cart() {
 									className="flex items-center justify-between mb-4 pb-4 border-b border-base-300"
 								>
 									<div className="flex items-center">
-										<Image src={item.image} alt={item.name} width={50} height={50} className="rounded" />
+										<Image
+											src={item.image}
+											alt={item.name}
+											width={50}
+											height={50}
+											className="rounded"
+										/>
 										<div className="ml-4">
 											<h3 className="font-semibold text-neutral">{item.name}</h3>
-											<p className="text-primary">${item.price}</p>
+											<p className="text-primary">{formatEuroPrice(item.price)}</p>
 										</div>
 									</div>
 									<div className="flex items-center">
@@ -105,7 +117,9 @@ export function Cart() {
 								</motion.div>
 							))}
 							<div className="mt-4">
-								<p className="text-xl font-semibold text-neutral">Total: ${getTotalPrice()}</p>
+								<p className="text-xl font-semibold text-neutral">
+									Total: {formatEuroPrice(getTotalPrice())}
+								</p>
 								<motion.button
 									whileHover={{ scale: 1.05 }}
 									whileTap={{ scale: 0.95 }}
@@ -129,5 +143,5 @@ export function Cart() {
 				</motion.div>
 			</motion.div>
 		</AnimatePresence>
-	)
+	);
 }
