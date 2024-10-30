@@ -1,13 +1,14 @@
+// app/checkout/success/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useCartStore } from '@/store/cartStore'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Check, Mail, ArrowRight, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
-export default function CheckoutSuccess() {
+function CheckoutSuccessContent() {
 	const clearCart = useCartStore((state) => state.clearCart)
 	const searchParams = useSearchParams()
 	const router = useRouter()
@@ -123,5 +124,17 @@ export default function CheckoutSuccess() {
 				</div>
 			</div>
 		</div>
+	)
+}
+
+export default function CheckoutSuccess() {
+	return (
+		<Suspense fallback={
+			<div className="min-h-screen bg-base-100 flex items-center justify-center">
+				<div className="animate-pulse">Loading...</div>
+			</div>
+		}>
+			<CheckoutSuccessContent />
+		</Suspense>
 	)
 }
