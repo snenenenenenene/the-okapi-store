@@ -192,7 +192,7 @@ export async function POST(req: Request) {
       }
 
       // Send confirmation emails to both users
-      const emailPromises = [];
+      const emailPromises: Promise<void>[] = [];
       
       if (customerEmail) {
         emailPromises.push(
