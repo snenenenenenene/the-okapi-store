@@ -4,13 +4,18 @@ import Stripe from 'stripe'
 const PRINTFUL_API_URL = 'https://api.printful.com'
 const PRINTFUL_TOKEN = process.env.PRINTFUL_TOKEN
 
+interface CartItem {
+  variant_id: string | number;
+  quantity: number;
+}
+
 export async function createPrintfulOrder(charge: Stripe.Charge, paymentIntent: Stripe.PaymentIntent, session?: Stripe.Checkout.Session | null) {
   console.log('Creating Printful order with charge:', JSON.stringify(charge, null, 2))
   console.log('PaymentIntent:', JSON.stringify(paymentIntent, null, 2))
   console.log('Session:', JSON.stringify(session, null, 2))
 
   const shippingDetails = charge.shipping?.address || paymentIntent.shipping?.address || session?.shipping_details?.address
-  let cartItems = []
+  let cartItems: CartItem[] = []
 
   // Try to get cartItems from different sources
   if (paymentIntent.metadata?.cartItems) {
@@ -26,7 +31,7 @@ export async function createPrintfulOrder(charge: Stripe.Charge, paymentIntent: 
       console.error('Error parsing cartItems from Session metadata:', error)
     }
   } else if (session?.line_items?.data) {
-    cartItems = session.line_items.data.map((item:any) => ({
+    cartItems = session.line_items.data.map((item: any) => ({
       variant_id: item.price?.product?.metadata?.variant_id,
       quantity: item.quantity
     }))
@@ -45,7 +50,7 @@ export async function createPrintfulOrder(charge: Stripe.Charge, paymentIntent: 
     throw new Error('No items found in the cart or invalid cart format')
   }
 
-  const printfulItems = cartItems.map((item: any) => {
+  const printfulItems = cartItems.map((item: CartItem) => {
     if (!item.variant_id || !item.quantity) {
       console.error('Invalid item in cart:', item)
       throw new Error('Invalid item format in cart')
