@@ -6,6 +6,7 @@ import Providers from "./components/providers";
 import { Header } from "./components/header";
 import { Footer } from "./components/footer";
 import { WebsiteSchema, OrganizationSchema } from './components/seo';
+import { Analytics } from "@vercel/analytics/react"
 
 export const metadata: Metadata = defaultMetadata;
 
@@ -18,6 +19,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" data-theme="okapilight">
+      <Analytics />
       <head>
         <WebsiteSchema siteUrl={siteUrl} />
         <OrganizationSchema siteUrl={siteUrl} />
