@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Components/Cart.tsx
 import { formatEuroPrice } from '@/utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,7 +37,7 @@ export function Cart() {
 	const handleCheckout = async () => {
 		setIsLoading(true);
 		try {
-			const sessionId = await checkout();
+			const sessionId: any = await checkout();
 			const stripe = await stripePromise;
 			if (stripe) {
 				const { error } = await stripe.redirectToCheckout({ sessionId });
