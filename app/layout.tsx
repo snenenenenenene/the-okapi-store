@@ -22,7 +22,7 @@ export default function RootLayout({
         <WebsiteSchema siteUrl={siteUrl} />
         <OrganizationSchema siteUrl={siteUrl} />
       </head>
-      <body className="antialiased font-[Satoshi] bg-base-100 text-neutral flex flex-col min-h-screen">
+      <body className="antialiased bg-base-100 text-neutral flex flex-col min-h-screen">
         <Providers>
           <Header />
           <main className="flex-grow container mx-auto px-4 py-8">

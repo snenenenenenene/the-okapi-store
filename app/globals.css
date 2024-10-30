@@ -2,22 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,301,400,401,500,501,700,701,900,901,1,2&display=swap'); */
-
-@layer base {
-   @font-face {
-    font-family: 'Satoshi', sans-serif;
-    src: url('https://api.fontshare.com/v2/css?f[]=satoshi@300,301,400,401,500,501,700,701,900,901,1,2&display=swap');
-  }
-
-  @font-face {
-    font-family: 'Inter Tight, sans-serif';
-    src: url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800&display=swap');
-  } 
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi/Fonts/TTF/Satoshi-Variable.ttf');
 }
 
-
+@font-face {
+  font-family: 'Inter Tight';
+  src: url('/fonts/Inter_Tight/InterTight-VariableFont_wght.ttf');
+} 
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -33,7 +26,6 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Satoshi';
 }
 
 @layer utilities {
