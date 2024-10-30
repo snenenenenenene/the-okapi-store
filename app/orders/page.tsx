@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Package, Truck, CheckCircle, AlertCircle, Clock, Calendar } from 'lucide-react'

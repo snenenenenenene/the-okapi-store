@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingBag, User, Search } from 'lucide-react'
+import { ShoppingBag, User } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { Cart } from '@/components/cart'
 import { signIn, signOut, useSession } from "next-auth/react"

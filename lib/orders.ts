@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client';
 import { Stripe } from 'stripe'
 
 export async function createOrder({
