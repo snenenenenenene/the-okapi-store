@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { motion } from "framer-motion";
-import { Seo } from "@/app/components/seo";
+import { SEO } from "@/app/components/seo";
 import { ProductJsonLd } from "@/app/components/productJSONLd";
 
 interface Product {
@@ -98,7 +98,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Seo
+      <SEO
         title={product.name}
         description={product.description}
         image={product.image}

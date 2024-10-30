@@ -1,5 +1,4 @@
 import React from 'react';
-import { Metadata } from 'next';
 import { jsonLdScriptProps } from 'react-schemaorg';
 import Head from 'next/head';
 
