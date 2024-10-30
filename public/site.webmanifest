@@ -1,0 +1,21 @@
+{
+	"name": "The Okapi Store",
+	"short_name": "Okapi Store",
+	"description": "Your premier destination for Okapi-themed apparel and accessories",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#FAFAFA",
+	"theme_color": "#8D6E63",
+	"icons": [
+	  {
+		"src": "/android-chrome-192x192.png",
+		"sizes": "192x192",
+		"type": "image/png"
+	  },
+	  {
+		"src": "/android-chrome-512x512.png",
+		"sizes": "512x512",
+		"type": "image/png"
+	  }
+	]
+  }

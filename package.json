@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma db push && npx prisma generate && next build",
+    "build": "npx prisma db push && npx prisma generate && next build && node -r ts-node/register ./utils/generateSitemap.ts",
     "start": "next start",
     "lint": "next lint"
   },
@@ -25,6 +25,7 @@
     "nodemailer": "^6.9.15",
     "react": "^18",
     "react-dom": "^18",
+    "react-schemaorg": "^2.0.0",
     "stripe": "^16.11.0",
     "three": "^0.168.0",
     "zustand": "^5.0.0-rc.2"

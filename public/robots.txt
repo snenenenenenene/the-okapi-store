@@ -1,0 +1,11 @@
+# robots.txt
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://theokapistore.com/sitemap.xml
+
+# Disallow admin and api routes
+Disallow: /api/*
+Disallow: /admin/*
+Disallow: /checkout/*
