@@ -1,5 +1,4 @@
 // Components/ProductCard.tsx
-import Image from 'next/image';
 import { formatEuroPrice } from '@/utils/formatters';
 
 interface Product {

@@ -1,5 +1,5 @@
 // Components/Cart.tsx
-import { formatEuroPrice, standardizePrice } from '@/utils/formatters';
+import { formatEuroPrice } from '@/utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
