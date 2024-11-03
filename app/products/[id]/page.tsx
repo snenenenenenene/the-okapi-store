@@ -8,63 +8,23 @@ import { ProductJsonLd } from "@/app/components/productJSONLd";
 import { Loader2 } from "lucide-react";
 import { formatEuroPrice } from "@/utils/formatters";
 
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  price: number;
-  variants: Variant[];
-  category: string;
-  inStock: boolean;
-  tags: string[];
-}
-
 interface Variant {
   id: number;
   name: string;
   price: string;
   size: string;
   currency: string;
-  thumbnailUrl: string | null;
-  previewUrl: string | null;
   availability_status: string;
 }
 
-const ProductSkeleton = () => (
-  <div className="container mx-auto px-4 py-8">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div className="relative">
-        <div className="aspect-square bg-base-200 animate-pulse rounded-lg"></div>
-      </div>
-      <div className="flex flex-col gap-4">
-        <div className="h-16 bg-base-200 animate-pulse rounded-lg w-3/4"></div>
-        <div className="h-24 bg-base-200 animate-pulse rounded-lg"></div>
-        <div className="space-y-2">
-          <div className="h-8 bg-base-200 animate-pulse rounded-lg w-1/4"></div>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-12 h-12 bg-base-200 animate-pulse rounded-full"></div>
-            ))}
-          </div>
-        </div>
-        <div className="h-12 bg-base-200 animate-pulse rounded-lg mt-4"></div>
-        <div className="flex gap-2 mt-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-6 w-20 bg-base-200 animate-pulse rounded-full"></div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
 export default function ProductDetail({ params }: { params: { id: string } }) {
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<any>(null);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [hoveredSize, setHoveredSize] = useState<number | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
-  const imageRef = useRef<HTMLDivElement>(null);
+  const [productImage, setProductImage] = useState<string>('');
+  const sizePickerRef = useRef<HTMLDivElement>(null);
+  const [sizeButtonPositions, setSizeButtonPositions] = useState<{ [key: number]: { x: number, y: number } }>({});
   const addToCart = useCartStore((state) => state.addToCart);
 
   useEffect(() => {
@@ -75,6 +35,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           const data = await response.json();
           setProduct(data);
           setSelectedVariant(data.variants[0]);
+          setProductImage(data.variants[0]?.previewUrl || data.image);
         }
       } catch (error) {
         console.error("Failed to fetch product:", error);
@@ -84,12 +45,37 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
     fetchProduct();
   }, [params.id]);
 
+  // Update button positions when window resizes or component mounts
+  useEffect(() => {
+    const updateButtonPositions = () => {
+      if (!sizePickerRef.current) return;
+
+      const positions: { [key: number]: { x: number, y: number } } = {};
+      const sizeButtons = sizePickerRef.current.querySelectorAll('.size-button');
+      const containerRect = sizePickerRef.current.getBoundingClientRect();
+
+      sizeButtons.forEach((button, index) => {
+        const rect = button.getBoundingClientRect();
+        positions[index] = {
+          x: rect.left - containerRect.left,
+          y: rect.top - containerRect.top
+        };
+      });
+
+      setSizeButtonPositions(positions);
+    };
+
+    updateButtonPositions();
+    window.addEventListener('resize', updateButtonPositions);
+
+    return () => window.removeEventListener('resize', updateButtonPositions);
+  }, [product]);
+
   if (!product || !selectedVariant) {
-    return <ProductSkeleton />;
+    return <div>Loading...</div>;
   }
 
   const handleVariantChange = (variant: Variant) => {
-    setImageLoading(true);
     setSelectedVariant(variant);
     setHoveredSize(null);
   };
@@ -101,10 +87,18 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
         name: product.name,
         price: parseFloat(selectedVariant.price),
         quantity: 1,
-        image: selectedVariant.thumbnailUrl || product.image,
+        image: productImage,
         variant_id: selectedVariant.id,
       });
     }
+  };
+
+  const getIndicatorPosition = () => {
+    const index = hoveredSize !== null
+      ? hoveredSize
+      : product.variants.findIndex((v: Variant) => v.id === selectedVariant.id);
+
+    return sizeButtonPositions[index] || { x: 0, y: 0 };
   };
 
   return (
@@ -112,7 +106,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
       <SEO
         title={product.name}
         description={product.description}
-        image={product.image}
+        image={productImage}
         type="product"
       />
       <ProductJsonLd product={product} />
@@ -125,7 +119,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="relative">
             <motion.div
-              ref={imageRef}
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.5 }}
@@ -137,7 +130,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
                 </div>
               )}
               <Image
-                src={selectedVariant.previewUrl || product.image}
+                src={productImage}
                 alt={product.name}
                 fill
                 className="object-contain"
@@ -154,7 +147,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           >
             <div className="relative h-64 mb-4 flex items-center">
               <h1 className="text-4xl uppercase" style={{ fontWeight: 900 }}>
-                {product.name.split(" ").map((word, index) => {
+                {product.name.split(" ").map((word: string, index: number) => {
                   if (word === "Okapi") {
                     return <span key={index} className="font-serif">{word} </span>;
                   }
@@ -165,16 +158,14 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
             <p className="mb-6 text-neutral-content">{product.description}</p>
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2 text-neutral uppercase">Select size</h2>
-              <div className="relative flex flex-wrap gap-6">
+              <div ref={sizePickerRef} className="relative flex flex-wrap gap-6">
                 <AnimatePresence>
                   <motion.div
                     className="absolute w-12 h-12 rounded-full border-2 border-primary"
                     initial={false}
                     animate={{
-                      x: hoveredSize !== null
-                        ? `${hoveredSize * 48 + hoveredSize * 24}px`
-                        : `${product.variants.findIndex(v => v.id === selectedVariant.id) * 48 +
-                        product.variants.findIndex(v => v.id === selectedVariant.id) * 24}px`,
+                      x: getIndicatorPosition().x,
+                      y: getIndicatorPosition().y,
                       opacity: hoveredSize !== null ? 0.5 : 1,
                     }}
                     transition={{
@@ -185,14 +176,16 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
                   />
                 </AnimatePresence>
 
-                {product.variants.map((variant, index) => (
+                {product.variants.map((variant: Variant, index: number) => (
                   <motion.button
                     key={variant.id}
+                    className="size-button relative w-12 h-12 rounded-full flex items-center justify-center"
                     onClick={() => handleVariantChange(variant)}
                     onHoverStart={() => setHoveredSize(index)}
                     onHoverEnd={() => setHoveredSize(null)}
-                    className={`relative w-12 h-12 rounded-full flex items-center justify-center
-                      ${selectedVariant.id === variant.id ? 'text-primary' : 'text-neutral-content'}`}
+                    style={{
+                      color: selectedVariant.id === variant.id ? '#8D6E63' : '#999'
+                    }}
                   >
                     {variant.size}
                   </motion.button>
@@ -205,8 +198,8 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
               onClick={handleAddToCart}
               disabled={selectedVariant.availability_status !== "active"}
               className={`btn btn-lg ${selectedVariant.availability_status === "active"
-                  ? "btn-primary"
-                  : "btn-disabled"
+                ? "btn-primary"
+                : "btn-disabled"
                 }`}
             >
               {selectedVariant.availability_status === "active"
@@ -215,7 +208,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
               - {formatEuroPrice(parseFloat(selectedVariant.price))}
             </motion.button>
             <div className="mt-4">
-              {product.tags?.map((tag) => (
+              {product.tags?.map((tag: string) => (
                 <span key={tag} className="badge badge-outline mr-2 mb-2">
                   {tag}
                 </span>
