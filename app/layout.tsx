@@ -55,7 +55,9 @@ export default function RootLayout({ children }: LayoutProps) {
             <Header />
           </Suspense>
           <main className="flex-grow container mx-auto px-4 py-8">
-            {children}
+            <Suspense fallback={<div>Loading...</div>}>
+              {children}
+            </Suspense>
           </main>
           <Suspense fallback={<div>Loading...</div>}>
             <Footer />
