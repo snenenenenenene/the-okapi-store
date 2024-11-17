@@ -1,12 +1,25 @@
 // app/layout.tsx
 import { Analytics } from "@vercel/analytics/react";
+import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
-import AnalyticsProvider from "./components/analytics/analytics-provider";
-import { Footer } from './components/footer';
-import { Header } from './components/header';
 import { LoadingSpinner } from './components/loadingStates';
-import Providers from "./components/providers";
 import "./globals.css";
+// Dynamically import components that use client-side features
+const Providers = dynamic(() => import('./components/providers'), {
+  ssr: false
+});
+
+const Header = dynamic(() => import('./components/header').then(mod => mod.Header), {
+  ssr: false
+});
+
+const Footer = dynamic(() => import('./components/footer').then(mod => mod.Footer), {
+  ssr: false
+});
+
+const AnalyticsProvider = dynamic(() => import('./components/analytics/analytics-provider'), {
+  ssr: false
+});
 
 export default function RootLayout({
   children,
@@ -16,21 +29,17 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="okapilight">
       <body className="antialiased bg-base-100 text-neutral flex flex-col min-h-screen">
-        <Providers>
-          <Suspense fallback={<LoadingSpinner />}>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Providers>
             <Header />
-          </Suspense>
-          <Suspense fallback={<LoadingSpinner />}>
             <main className="flex-grow container mx-auto px-4 py-8">
               {children}
             </main>
-          </Suspense>
-          <Suspense fallback={<LoadingSpinner />}>
             <Footer />
-          </Suspense>
-          <Analytics />
-          <AnalyticsProvider />
-        </Providers>
+            <Analytics />
+            <AnalyticsProvider />
+          </Providers>
+        </Suspense>
       </body>
     </html>
   );
