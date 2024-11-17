@@ -1,6 +1,8 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import { Github, Linkedin, Mail } from "lucide-react"
+"use client"
+// app/components/footer.tsx
+import { Github, Linkedin, Mail } from "lucide-react";
+import Image from 'next/image';
+import Link from 'next/link';
 
 export function Footer() {
   return (
@@ -22,7 +24,7 @@ export function Footer() {
             </div>
           </Link>
 
-          <div className="footer-content grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+          <div className="footer-content grid grid-cols-1 md:grid-cols-4 gap-8 mt-8">
             <div className="footer-block">
               <div className="footer-title-small text-xs font-medium tracking-wider text-gray-500 mb-4">
                 NAVIGATION
@@ -45,12 +47,6 @@ export function Footer() {
                 <Link href="/" className="footer-link text-gray-600 hover:text-black">
                   Apparel
                 </Link>
-                {/* <Link href="/products?category=accessories" className="footer-link text-gray-600 hover:text-black">
-                  Accessories
-                </Link>
-                <Link href="/products?category=prints" className="footer-link text-gray-600 hover:text-black">
-                  Art Prints
-                </Link> */}
               </div>
             </div>
 
@@ -68,6 +64,31 @@ export function Footer() {
                 <Link href="/contact" className="footer-link text-gray-600 hover:text-black">
                   Contact Us <strong>→</strong>
                 </Link>
+              </div>
+            </div>
+
+            {/* New Legal Section */}
+            <div className="footer-block">
+              <div className="footer-title-small text-xs font-medium tracking-wider text-gray-500 mb-4">
+                LEGAL
+              </div>
+              <div className="flex flex-col space-y-3">
+                <Link href="/privacy" className="footer-link text-gray-600 hover:text-black">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className="footer-link text-gray-600 hover:text-black">
+                  Terms of Service
+                </Link>
+                <button
+                  onClick={() => {
+                    // Reset cookie consent to show banner again
+                    localStorage.removeItem('cookie-consent');
+                    window.location.reload();
+                  }}
+                  className="footer-link text-gray-600 hover:text-black text-left"
+                >
+                  Cookie Settings
+                </button>
               </div>
             </div>
           </div>

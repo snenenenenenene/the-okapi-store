@@ -1,60 +1,63 @@
-// utils/generateSitemap.ts
-import { writeFileSync } from 'fs';
-import { globby } from 'globby';
+// scripts/generate-sitemap.ts
+import prisma from "@/lib/prisma";
+import { writeFileSync } from "fs";
 
 async function generateSitemap() {
-  const pages = await globby([
-    'app/**/*.tsx',
-    '!app/**/_*.tsx',
-    '!app/**/layout.tsx',
-    '!app/**/error.tsx',
-    '!app/**/loading.tsx',
-    '!app/api/**',
-  ]);
+  // Get all products from the database
+  const products = await prisma.product.findMany({
+    select: {
+      id: true,
+      updatedAt: true,
+    },
+  });
 
-  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://theokapistore.com';
+  // Static pages with their update frequency and priority
+  const staticPages = [
+    { url: "", changefreq: "daily", priority: 1.0 },
+    { url: "about", changefreq: "monthly", priority: 0.8 },
+    { url: "products", changefreq: "daily", priority: 0.9 },
+    { url: "shipping", changefreq: "monthly", priority: 0.7 },
+    { url: "returns", changefreq: "monthly", priority: 0.7 },
+    { url: "privacy", changefreq: "monthly", priority: 0.5 },
+    { url: "terms", changefreq: "monthly", priority: 0.5 },
+  ];
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    "https://the-okapi-webstore.vercel.app/";
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-            xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-      ${pages
-        .map((page) => {
-          // Convert page path to public URL
-          const path = page
-            .replace('app/', '')
-            .replace('/page.tsx', '')
-            .replace('index', '');
-          
-          const route = path === '' ? '' : `/${path}`;
-          const url = `${siteUrl}${route}`;
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  ${staticPages
+    .map(
+      (page) => `
+    <url>
+      <loc>${baseUrl}/${page.url}</loc>
+      <lastmod>${new Date().toISOString()}</lastmod>
+      <changefreq>${page.changefreq}</changefreq>
+      <priority>${page.priority}</priority>
+    </url>`
+    )
+    .join("")}
+  ${products
+    .map(
+      (product) => `
+    <url>
+      <loc>${baseUrl}/products/${product.id}</loc>
+      <lastmod>${product.updatedAt.toISOString()}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>0.8</priority>
+    </url>`
+    )
+    .join("")}
+</urlset>`;
 
-          // Set priority based on route depth
-          const priority = 1 - (route.split('/').length - 1) * 0.2;
-
-          // Set changefreq based on route type
-          const changefreq = route === '' ? 'daily' 
-            : route.startsWith('/products') ? 'weekly'
-            : 'monthly';
-
-          return `
-            <url>
-              <loc>${url}</loc>
-              <lastmod>${new Date().toISOString()}</lastmod>
-              <changefreq>${changefreq}</changefreq>
-              <priority>${Math.max(0.1, priority).toFixed(1)}</priority>
-              ${route.startsWith('/products') ? `
-              <image:image>
-                <image:loc>${siteUrl}/images/products${route}.jpg</image:loc>
-                <image:title>Product Image</image:title>
-              </image:image>` : ''}
-            </url>
-          `;
-        })
-        .join('')}
-    </urlset>`;
-
-  writeFileSync('public/sitemap.xml', sitemap);
-  console.log('Sitemap generated successfully');
+  writeFileSync("public/sitemap.xml", sitemap);
+  console.log("Sitemap generated successfully");
 }
 
-export default generateSitemap;
+generateSitemap().catch((error) => {
+  console.error("Error generating sitemap:", error);
+  process.exit(1);
+});

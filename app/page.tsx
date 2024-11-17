@@ -2,10 +2,11 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 'use client'
 
-import { useEffect } from 'react'
-import Link from 'next/link'
 import { ProductCard } from '@/components/productCard'
 import { useCartStore } from '@/store/cartStore'
+import { trackEvent } from '@/utils/analytics'
+import Link from 'next/link'
+import { useEffect } from 'react'
 // import { Product } from '@/types/product'
 
 export default function ProductsPage() {
@@ -50,7 +51,12 @@ export default function ProductsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
           {products.map((product: any) => (
-            <Link href={`/products/${product.id}`} key={product.id}>
+            <Link href={`/products/${product.id}`} key={product.id}
+              onClick={() => {
+                trackEvent.viewProduct(product);
+              }
+              }
+            >
               {/* @ts-ignore */}
               <ProductCard product={product} />
             </Link>

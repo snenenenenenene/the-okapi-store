@@ -1,11 +1,14 @@
-# robots.txt
+# /public/robots.txt
 User-agent: *
 Allow: /
+Allow: /products/
+Allow: /about/
+Allow: /shipping/
+Allow: /returns/
+
+# Don't index admin or API routes
+Disallow: /api/
+Disallow: /admin/
 
 # Sitemaps
-Sitemap: https://theokapistore.com/sitemap.xml
-
-# Disallow admin and api routes
-Disallow: /api/*
-Disallow: /admin/*
-Disallow: /checkout/*
+Sitemap: https://the-okapi-webstore.vercel.app/sitemap.xml
