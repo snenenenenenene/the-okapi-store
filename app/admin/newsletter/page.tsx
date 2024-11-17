@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/admin/newsletter/page.tsx
 'use client';
 
@@ -25,7 +26,7 @@ export default function NewsletterAdmin() {
 			setLoading(false);
 		};
 
-		if (session?.user?.role === 'admin') {
+		if ((session?.user as any).role === 'admin') {
 			fetchSubscribers();
 		}
 	}, [session]);
@@ -56,7 +57,7 @@ export default function NewsletterAdmin() {
 		);
 	}
 
-	if (session?.user?.role !== 'admin') {
+	if ((session?.user as any).role !== 'admin') {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
 				<p className="text-error">Access denied</p>
