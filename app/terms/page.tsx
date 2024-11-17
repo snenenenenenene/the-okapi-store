@@ -3,6 +3,7 @@
 
 import { motion } from 'framer-motion'
 import { FileText, HelpCircle, Scale, ShieldCheck } from 'lucide-react'
+import { Suspense } from 'react'
 
 const container = {
 	hidden: { opacity: 0 },
@@ -19,7 +20,7 @@ const item = {
 	show: { opacity: 1, y: 0 }
 }
 
-export default function TermsPage() {
+function TermsPage() {
 	return (
 		<div className="min-h-screen bg-base-100">
 			{/* Hero Section */}
@@ -267,5 +268,13 @@ export default function TermsPage() {
 				</div>
 			</motion.div>
 		</div>
+	)
+}
+
+export default function TermsPageWrapper() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<TermsPage />
+		</Suspense>
 	)
 }
