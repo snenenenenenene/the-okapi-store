@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import { LoadingSpinner } from './components/loadingStates';
 import "./globals.css";
-// Dynamically import components that use client-side features
+
 const Providers = dynamic(() => import('./components/providers'), {
   ssr: false
 });

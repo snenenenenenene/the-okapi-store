@@ -1,6 +1,7 @@
-// scripts/generate-sitemap.ts
-import prisma from "@/lib/prisma";
-import { writeFileSync } from "fs";
+/* eslint-disable @typescript-eslint/no-var-requires */
+// scripts/generate-sitemap.js
+const prisma = require("@/lib/prisma");
+const { writeFileSync } = require("fs");
 
 async function generateSitemap() {
   // Get all products from the database
