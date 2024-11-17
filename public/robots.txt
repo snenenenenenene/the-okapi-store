@@ -1,14 +1,15 @@
-# /public/robots.txt
-User-agent: *
-Allow: /
-Allow: /products/
-Allow: /about/
-Allow: /shipping/
-Allow: /returns/
+// app/robots.ts
+import { MetadataRoute } from 'next';
 
-# Don't index admin or API routes
-Disallow: /api/
-Disallow: /admin/
+export default function robots(): MetadataRoute.Robots {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://theokapistore.com';
 
-# Sitemaps
-Sitemap: https://the-okapi-webstore.vercel.app/sitemap.xml
+  return {
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      disallow: ['/api/', '/admin/', '/checkout/'],
+    },
+    sitemap: `${baseUrl}/sitemap.xml`,
+  };
+}
