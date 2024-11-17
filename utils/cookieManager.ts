@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // utils/cookieManager.ts
 
 interface CookiePreferences {
@@ -64,7 +65,7 @@ export const applyPreferences = (preferences: CookiePreferences): void => {
 // Helper functions for analytics
 const enableAnalytics = () => {
   // Enable Google Analytics
-  if (typeof window !== "undefined" && window.gtag) {
+  if (typeof window !== "undefined" && (window as any).gtag) {
     (window as any).gtag("consent", "update", {
       analytics_storage: "granted",
     });
@@ -73,7 +74,7 @@ const enableAnalytics = () => {
 
 const disableAnalytics = () => {
   // Disable Google Analytics
-  if (typeof window !== "undefined" && window.gtag) {
+  if (typeof window !== "undefined" && (window as any).gtag) {
     (window as any).gtag("consent", "update", {
       analytics_storage: "denied",
     });
@@ -83,14 +84,14 @@ const disableAnalytics = () => {
 // Helper functions for marketing
 const enableMarketing = () => {
   // Enable marketing cookies (e.g., Meta Pixel)
-  if (typeof window !== "undefined" && window.fbq) {
+  if (typeof window !== "undefined" && (window as any).fbq) {
     (window as any).fbq("consent", "grant");
   }
 };
 
 const disableMarketing = () => {
   // Disable marketing cookies
-  if (typeof window !== "undefined" && window.fbq) {
+  if (typeof window !== "undefined" && (window as any).fbq) {
     (window as any).fbq("consent", "revoke");
   }
 };
