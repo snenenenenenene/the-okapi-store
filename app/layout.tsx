@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/layout.tsx
 import { Analytics } from "@vercel/analytics/react";
 import { Metadata } from "next";
 import { Suspense } from "react";
@@ -59,6 +58,9 @@ export const metadata: Metadata = {
       "Discover unique Okapi-themed apparel and accessories. Each purchase supports Okapi conservation efforts.",
     images: [`${baseUrl}/images/og-image.svg`],
   },
+  alternates: {
+    canonical: baseUrl,
+  },
 };
 
 interface LayoutProps {
@@ -84,6 +86,10 @@ export default function RootLayout({ children }: LayoutProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* JSON-LD Structured Data */}
         <script type="application/ld+json">{safeJsonLd(storeJsonLd)}</script>
+        {/* Additional Meta Tags */}
+        <meta name="robots" content="index, follow" />
+        <meta name="author" content="The Okapi Store" />
+        <meta name="theme-color" content="#ffffff" />
       </head>
       <body className="antialiased bg-base-100 text-neutral flex flex-col min-h-screen">
         <Providers>
