@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/layout.tsx
 import { Analytics } from "@vercel/analytics/react";
 import { Metadata } from "next";
@@ -8,6 +9,11 @@ import Providers from "./components/providers";
 import "./globals.css";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://theokapistore.com";
+
+// Helper function to safely escape JSON for injection into <script> tags
+const safeJsonLd = (json: any) => {
+  return JSON.stringify(json).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
+};
 
 // Define metadata
 export const metadata: Metadata = {
@@ -39,7 +45,7 @@ export const metadata: Metadata = {
       "Discover unique Okapi-themed apparel and accessories. Each purchase supports Okapi conservation efforts.",
     images: [
       {
-        url: `${baseUrl}/images/og-image.jpg`,
+        url: `${baseUrl}/images/og-image.svg`,
         width: 1200,
         height: 630,
         alt: "The Okapi Store - Unique Okapi-themed Apparel",
@@ -51,7 +57,7 @@ export const metadata: Metadata = {
     title: "The Okapi Store | Unique Okapi-themed Apparel",
     description:
       "Discover unique Okapi-themed apparel and accessories. Each purchase supports Okapi conservation efforts.",
-    images: [`${baseUrl}/images/og-image.jpg`],
+    images: [`${baseUrl}/images/og-image.svg`],
   },
 };
 
@@ -60,23 +66,24 @@ interface LayoutProps {
 }
 
 export default function RootLayout({ children }: LayoutProps) {
+  // JSON-LD for the store
+  const storeJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: "The Okapi Store",
+    url: baseUrl,
+    logo: `${baseUrl}/images/logo.png`,
+    description:
+      "Unique Okapi-themed apparel supporting wildlife conservation.",
+    sameAs: ["https://twitter.com/sennebels"],
+  };
+
   return (
     <html lang="en" data-theme="okapilight">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* JSON-LD Structured Data */}
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Store",
-            name: "The Okapi Store",
-            url: baseUrl,
-            logo: `${baseUrl}/images/logo.png`,
-            description:
-              "Unique Okapi-themed apparel supporting wildlife conservation.",
-            sameAs: ["https://twitter.com/sennebels"],
-          })}
-        </script>
+        <script type="application/ld+json">{safeJsonLd(storeJsonLd)}</script>
       </head>
       <body className="antialiased bg-base-100 text-neutral flex flex-col min-h-screen">
         <Providers>
