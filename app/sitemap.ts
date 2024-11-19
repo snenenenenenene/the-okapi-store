@@ -6,14 +6,14 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || "https://theokapistore.com";
 
 export async function generateSitemaps() {
-  // Get the total count of products
+  // Count total products in the database
   const totalProducts = await prisma.product.count();
 
-  // Calculate how many sitemaps we need (50,000 URLs per sitemap is Google's limit)
+  // Google's limit is 50,000 URLs per sitemap
   const productsPerSitemap = 50000;
   const totalSitemaps = Math.ceil(totalProducts / productsPerSitemap);
 
-  // Return an array of sitemap IDs
+  // Generate array of sitemap IDs
   return Array.from({ length: totalSitemaps }, (_, i) => ({ id: i }));
 }
 
@@ -25,7 +25,7 @@ export default async function sitemap({
   const productsPerPage = 50000;
   const start = id * productsPerPage;
 
-  // Get products for this sitemap
+  // Fetch paginated products
   const products = await prisma.product.findMany({
     skip: start,
     take: productsPerPage,
@@ -84,16 +84,22 @@ export default async function sitemap({
     },
   ];
 
-  // Only include static pages in the first sitemap
-  const pages = id === 0 ? staticPages : [];
-
-  // Add product pages
+  // Add product pages with image support
   const productPages = products.map((product) => ({
     url: `${BASE_URL}/products/${product.id}`,
     lastModified: product.updatedAt,
     changeFrequency: "weekly" as const,
     priority: 0.8,
+    images: [
+      {
+        url: `${BASE_URL}/images/products/${product.id}.jpg`,
+        title: `Product ${product.id}`,
+      },
+    ],
   }));
 
-  return [...pages, ...productPages];
+  // Include static pages only in the first sitemap
+  const pages = id === 0 ? [...staticPages, ...productPages] : productPages;
+
+  return pages;
 }
