@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useState, useRef } from "react";
-import Image from "next/image";
-import { useCartStore } from "@/store/cartStore";
-import { motion, AnimatePresence } from "framer-motion";
-import { SEO } from "@/app/components/seo";
 import { ProductJsonLd } from "@/app/components/productJSONLd";
-import { Loader2 } from "lucide-react";
+import { SEO } from "@/app/components/seo";
+import { useCartStore } from "@/store/cartStore";
 import { formatEuroPrice } from "@/utils/formatters";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 interface Variant {
   id: number;

@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 			url: `${BASE_URL}/products/${params.id}`,
 			images: [
 				{
-					url: product.variants[0]?.previewUrl || product.image,
+					url: product.thumbnail_url || product.image,
 					width: 800,
 					height: 600,
 					alt: product.name,
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 			card: "summary_large_image",
 			title: `${product.name} | The Okapi Store`,
 			description: product.description,
-			images: [product.variants[0]?.previewUrl || product.image],
+			images: [product.thumbnail_url || product.image],
 		},
 	};
 }

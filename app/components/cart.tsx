@@ -1,14 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Components/Cart.tsx
-import { formatEuroPrice } from '@/utils/formatters';
-import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
+import { formatEuroPrice } from '@/utils/formatters';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 export function Cart() {
 	const {
@@ -18,10 +15,10 @@ export function Cart() {
 		clearCart,
 		toggleCart,
 		getTotalPrice,
-		checkout
 	} = useCartStore();
 	const [isLoading, setIsLoading] = useState(false);
 	const cartRef = useRef<HTMLDivElement>(null);
+	const router = useRouter();
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -37,16 +34,10 @@ export function Cart() {
 	const handleCheckout = async () => {
 		setIsLoading(true);
 		try {
-			const sessionId: any = await checkout();
-			const stripe = await stripePromise;
-			if (stripe) {
-				const { error } = await stripe.redirectToCheckout({ sessionId });
-				if (error) {
-					console.error('Stripe checkout error:', error);
-				}
-			}
+			toggleCart(); // Close the cart
+			router.push('/checkout'); // Navigate to checkout page
 		} catch (error) {
-			console.error('Checkout error:', error);
+			console.error('Navigation error:', error);
 		} finally {
 			setIsLoading(false);
 		}

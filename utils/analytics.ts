@@ -42,7 +42,7 @@ export const trackEvent = {
 
   addToCart: (product: Product) => {
     const { analytics, marketing } = getCookiePreferences();
-
+    if (!window.gtag || !window.fbq) return;
     if (analytics) {
       window.gtag("event", "add_to_cart", {
         currency: "EUR",
