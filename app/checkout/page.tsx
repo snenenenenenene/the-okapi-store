@@ -1,13 +1,13 @@
-// app/checkout/page.tsx
-'use client'
+'use client';
 
 import { useCartStore } from '@/store/cartStore';
 import { AddressElement, Elements, LinkAuthenticationElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Loader2, Lock, Shield, Truck } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -29,6 +29,15 @@ interface ShippingRate {
 	max_delivery_days: number;
 }
 
+interface Address {
+	country: string;
+	postal_code: string;
+	city: string;
+	line1: string;
+	line2?: string;
+	state?: string;
+}
+
 function CheckoutForm() {
 	const stripe = useStripe();
 	const elements = useElements();
@@ -38,19 +47,37 @@ function CheckoutForm() {
 	const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
 	const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
 	const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
-	const [address, setAddress] = useState<any>(null);
+	const [address, setAddress] = useState<{ address: Address; name?: string; phone?: string } | null>(null);
 	const router = useRouter();
 	const { cart, clearCart, getTotalPrice } = useCartStore();
+	const [step, setStep] = useState(1);
 
-	const calculateShipping = async (address: any) => {
-		console.log('Calculating shipping rates...');
+	const isAddressComplete = (addr: Address | undefined): boolean => {
+		return Boolean(
+			addr?.country &&
+			addr?.postal_code &&
+			addr?.city &&
+			addr?.line1
+		);
+	};
 
-		if (!address?.country) return;
+	const haveAddressDetailsChanged = (oldAddr: Address | undefined, newAddr: Address): boolean => {
+		if (!oldAddr) return true;
+
+		return (
+			oldAddr.country !== newAddr.country ||
+			oldAddr.postal_code !== newAddr.postal_code ||
+			oldAddr.city !== newAddr.city ||
+			oldAddr.line1 !== newAddr.line1
+		);
+	};
+
+	const calculateShipping = useCallback(async (shippingAddress: Address) => {
+		if (!shippingAddress?.country) return;
+
 		setIsCalculatingShipping(true);
 		setShippingRates([]);
 		setSelectedRate(null);
-
-		console.log(address)
 
 		try {
 			const response = await fetch('/api/printful/shipping-rates', {
@@ -58,28 +85,24 @@ function CheckoutForm() {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					address: {
-						address1: address.line1,
-						address2: address.line2,
-						city: address.city,
-						state: address.state,
-						country: address.country,
-						zip: address.postal_code,
-						phone: address.phone,
+						address1: shippingAddress.line1,
+						address2: shippingAddress.line2,
+						city: shippingAddress.city,
+						state: shippingAddress.state,
+						country: shippingAddress.country,
+						zip: shippingAddress.postal_code,
 					},
 					items: cart
 				}),
 			});
 
-			console.log(response)
 			if (!response.ok) {
 				throw new Error('Failed to calculate shipping');
 			}
 
 			const rates = await response.json();
-			console.log(rates)
 			setShippingRates(rates);
 
-			// Select cheapest rate by default
 			if (rates.length > 0) {
 				const cheapestRate = rates.reduce((prev: ShippingRate, curr: ShippingRate) =>
 					prev.rate < curr.rate ? prev : curr
@@ -87,55 +110,23 @@ function CheckoutForm() {
 				setSelectedRate(cheapestRate);
 			}
 		} catch (error) {
-			console.error('Shipping calculation error:', error);
 			setMessage('Failed to calculate shipping rates. Please try again.');
 		} finally {
 			setIsCalculatingShipping(false);
 		}
-	};
+	}, [cart]);
 
-	const handleAddressChange = async (event: any) => {
-		console.log('Address Event:', event);
+	const handleAddressChange = (event: any) => {
+		const newAddress = event.value;
+		const currentAddress = address?.address;
 
-		// Check if we have all required fields for shipping calculation
-		const addressComplete = event.value &&
-			event.value.address?.country &&
-			event.value.address?.postal_code &&
-			event.value.address?.city;
+		setAddress(newAddress);
 
-		if (addressComplete) {
-			const newAddress = event.value;
-			setAddress(newAddress);
-			await calculateShipping(newAddress.address);
+		if (isAddressComplete(newAddress?.address) &&
+			haveAddressDetailsChanged(currentAddress, newAddress.address)) {
+			calculateShipping(newAddress.address);
 		}
 	};
-
-	useEffect(() => {
-		if (!stripe) return;
-
-		const clientSecret = new URLSearchParams(window.location.search).get(
-			"payment_intent_client_secret"
-		);
-
-		if (!clientSecret) return;
-
-		stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
-			switch (paymentIntent?.status) {
-				case "succeeded":
-					setMessage("Payment succeeded!");
-					break;
-				case "processing":
-					setMessage("Your payment is processing.");
-					break;
-				case "requires_payment_method":
-					setMessage("Please provide payment details.");
-					break;
-				default:
-					setMessage("Something went wrong.");
-					break;
-			}
-		});
-	}, [stripe]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -148,8 +139,8 @@ function CheckoutForm() {
 		setIsLoading(true);
 
 		try {
-			// Update payment intent with final amount including shipping
-			const updateResponse = await fetch('/api/payment-intent/update', {
+			// Create final payment intent with shipping info on server side
+			const response = await fetch('/api/payment-intent', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -157,10 +148,11 @@ function CheckoutForm() {
 					shipping_rate: selectedRate,
 					amount: getTotalPrice() + selectedRate.rate,
 					shipping_address: address,
+					items: cart
 				}),
 			});
 
-			if (!updateResponse.ok) {
+			if (!response.ok) {
 				throw new Error('Failed to update payment intent');
 			}
 
@@ -169,189 +161,227 @@ function CheckoutForm() {
 				confirmParams: {
 					return_url: `${window.location.origin}/checkout/success`,
 					receipt_email: email,
-					shipping: {
-						address: {
-							line1: address.address.line1,
-							line2: address.address.line2 || '',
-							city: address.address.city,
-							state: address.address.state,
-							postal_code: address.address.postal_code,
-							country: address.address.country,
+					payment_method_data: {
+						billing_details: {
+							email,
+							name: address.name,
+							address: {
+								line1: address.address.line1,
+								line2: address.address.line2 || '',
+								city: address.address.city,
+								state: address.address.state,
+								postal_code: address.address.postal_code,
+								country: address.address.country,
+							},
 						},
-						name: `${address.name}`,
-						phone: address.phone,
-						carrier: selectedRate.name,
 					},
 				},
 			});
 
 			if (error) {
-				if (error.type === "card_error" || error.type === "validation_error") {
-					setMessage(error.message || "An error occurred");
-				} else {
-					setMessage("An unexpected error occurred.");
-				}
+				setMessage(error.message || "An error occurred");
 			} else {
 				clearCart();
 				localStorage.removeItem('payment_intent_id');
 			}
 		} catch (error) {
 			console.error('Payment error:', error);
-			setMessage("Failed to process payment.");
+			setMessage("Payment processing failed. Please try again.");
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
-	const subtotal: number = getTotalPrice();
+
+	const subtotal = getTotalPrice();
 	const shippingCost = selectedRate?.rate || 0;
 	const total = (Number(subtotal) + Number(shippingCost)).toFixed(2);
 
 	return (
-		<div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-			{/* Order Summary */}
-			<div>
-				<h2 className="text-2xl font-semibold mb-6">Order Summary</h2>
-				<div className="space-y-4">
-					{cart.map(item => (
-						<div key={item.id} className="flex gap-4 border-b pb-4">
-							<div className="relative w-20 h-20">
-								<Image
-									src={item.image}
-									alt={item.name}
-									fill
-									className="object-cover rounded-md"
-								/>
-							</div>
-							<div className="flex-1">
-								<h3 className="font-medium">{item.name}</h3>
-								<p className="text-sm text-neutral-500">Quantity: {item.quantity}</p>
-								<p className="font-medium">€{(item.price * item.quantity).toFixed(2)}</p>
-							</div>
-						</div>
-					))}
+		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div className="flex items-center mb-8">
+				<Link href="/cart" className="flex items-center text-sm text-neutral-600 hover:text-neutral-900">
+					<ArrowLeft className="w-4 h-4 mr-2" />
+					Return to cart
+				</Link>
+			</div>
 
-					<div className="bg-base-100 p-6 rounded-lg space-y-4">
-						<div className="flex justify-between">
-							<span>Subtotal</span>
-							<span>€{subtotal}</span>
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+				{/* Left Column - Order Summary */}
+				<div className="order-2 lg:order-1">
+					<div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+						<h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+						<div className="space-y-4 mb-6">
+							{cart.map(item => (
+								<div key={item.id} className="flex gap-4 py-4 border-b">
+									<div className="relative w-20 h-20">
+										<Image
+											src={item.image}
+											alt={item.name}
+											fill
+											className="object-cover rounded-md"
+										/>
+										<div className="absolute -top-2 -right-2 w-6 h-6 bg-neutral-900 rounded-full flex items-center justify-center text-white text-xs">
+											{item.quantity}
+										</div>
+									</div>
+									<div className="flex-1">
+										<h3 className="font-medium">{item.name}</h3>
+										<p className="text-sm text-neutral-600">
+											€{(item.price * item.quantity).toFixed(2)}
+										</p>
+									</div>
+								</div>
+							))}
 						</div>
-						{selectedRate && (
-							<div className="flex justify-between text-neutral-600">
-								<span>Shipping ({selectedRate.name})</span>
-								<span>€{shippingCost}</span>
+
+						<div className="space-y-2 text-sm">
+							<div className="flex justify-between py-2">
+								<span className="text-neutral-600">Subtotal</span>
+								<span>€{subtotal}</span>
 							</div>
-						)}
-						<div className="border-t pt-4">
-							<div className="flex justify-between font-bold text-lg">
+							{selectedRate && (
+								<div className="flex justify-between py-2">
+									<span className="text-neutral-600">
+										Shipping ({selectedRate.name})
+									</span>
+									<span>€{shippingCost}</span>
+								</div>
+							)}
+							<div className="flex justify-between py-4 border-t border-neutral-200 text-lg font-semibold">
 								<span>Total</span>
 								<span>€{total}</span>
 							</div>
 						</div>
 					</div>
+
+					<div className="bg-neutral-50 rounded-lg p-4 space-y-3">
+						<div className="flex items-center gap-2 text-sm text-neutral-600">
+							<Shield className="w-4 h-4" />
+							<span>Secure checkout powered by Stripe</span>
+						</div>
+						<div className="flex items-center gap-2 text-sm text-neutral-600">
+							<Truck className="w-4 h-4" />
+							<span>Free shipping on orders over €100</span>
+						</div>
+					</div>
+				</div>
+
+				{/* Right Column - Checkout Form */}
+				<div className="order-1 lg:order-2">
+					<form onSubmit={handleSubmit} className="space-y-8">
+						<div className="bg-white rounded-lg shadow-sm p-6">
+							<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+								<span>1. Contact Information</span>
+								{step === 1 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+							</h3>
+							<LinkAuthenticationElement
+								options={{
+									defaultValues: { email },
+								}}
+								onChange={(e) => setEmail(e.value.email)}
+							/>
+						</div>
+
+						<div className="bg-white rounded-lg shadow-sm p-6">
+							<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+								<span>2. Shipping Address</span>
+								{step === 2 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+							</h3>
+							<AddressElement
+								options={{
+									mode: 'shipping',
+									allowedCountries: ['US', 'CA', 'GB', 'FR', 'DE', 'IT', 'ES', 'NL', 'BE'],
+									fields: {
+										phone: 'always',
+									},
+									validation: {
+										phone: {
+											required: 'always',
+										},
+									},
+								}}
+								onChange={handleAddressChange}
+							/>
+						</div>
+
+						{isCalculatingShipping ? (
+							<div className="bg-white rounded-lg shadow-sm p-6">
+								<div className="flex items-center justify-center py-4">
+									<Loader2 className="w-6 h-6 animate-spin text-primary" />
+									<span className="ml-2">Calculating shipping rates...</span>
+								</div>
+							</div>
+						) : shippingRates.length > 0 && (
+							<div className="bg-white rounded-lg shadow-sm p-6">
+								<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+									<span>3. Shipping Method</span>
+									{step === 3 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+								</h3>
+								<div className="space-y-3">
+									{shippingRates.map((rate) => (
+										<label
+											key={rate.id}
+											className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-colors
+                        ${selectedRate?.id === rate.id ? 'border-primary bg-primary/5' : 'hover:bg-neutral-50'}`}
+										>
+											<input
+												type="radio"
+												name="shipping_rate"
+												checked={selectedRate?.id === rate.id}
+												onChange={() => setSelectedRate(rate)}
+												className="radio radio-primary"
+											/>
+											<div className="flex-1">
+												<div className="font-medium">{rate.name}</div>
+												<div className="text-sm text-neutral-600">
+													{rate.min_delivery_days}-{rate.max_delivery_days} business days
+												</div>
+											</div>
+											<div className="font-semibold">
+												€{rate.rate}
+											</div>
+										</label>
+									))}
+								</div>
+							</div>
+						)}
+
+						<div className="bg-white rounded-lg shadow-sm p-6">
+							<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+								<span>4. Payment</span>
+								{step === 4 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+							</h3>
+							<PaymentElement />
+						</div>
+
+						{message && (
+							<div className="flex items-center gap-2 p-4 bg-error/10 text-error rounded-lg">
+								<AlertCircle className="w-5 h-5" />
+								{message}
+							</div>
+						)}
+
+						<button
+							type="submit"
+							disabled={!stripe || isLoading || !selectedRate}
+							className="w-full btn btn-primary btn-lg gap-2"
+						>
+							{isLoading ? (
+								<>
+									<Loader2 className="w-5 h-5 animate-spin" />
+									Processing...
+								</>
+							) : (
+								<>
+									<Lock className="w-5 h-5" />
+									Pay €{total}
+								</>
+							)}
+						</button>
+					</form>
 				</div>
 			</div>
-
-			{/* Payment Form */}
-			<form onSubmit={handleSubmit} className="space-y-8">
-				<div className="space-y-4">
-					<h2 className="text-xl font-semibold">Contact Information</h2>
-					<LinkAuthenticationElement
-						options={{
-							defaultValues: {
-								email: email,
-							},
-						}}
-						onChange={(e) => setEmail(e.value.email)}
-					/>
-				</div>
-
-				<div className="space-y-4">
-					<h2 className="text-xl font-semibold">Shipping Address</h2>
-					<AddressElement
-						options={{
-							mode: 'shipping',
-							allowedCountries: ['US', 'CA', 'GB', 'FR', 'DE', 'IT', 'ES', 'NL', 'BE'],
-							fields: {
-								phone: 'always',
-							},
-							validation: {
-								phone: {
-									required: 'always',
-								},
-							},
-							display: {
-								name: 'split',
-							},
-							autocomplete: {
-								mode: 'automatic',
-							},
-						}}
-						onChange={handleAddressChange}
-					/>
-				</div>
-
-				{isCalculatingShipping ? (
-					<div className="flex items-center justify-center p-4 bg-base-200 rounded-lg">
-						<Loader2 className="w-5 h-5 animate-spin mr-2" />
-						<span>Calculating shipping rates...</span>
-					</div>
-				) : shippingRates.length > 0 && (
-					<div className="space-y-4">
-						<h2 className="text-xl font-semibold">Shipping Method</h2>
-						{shippingRates.map((rate) => (
-							<label
-								key={rate.id}
-								className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-colors
-                  ${selectedRate?.id === rate.id ? 'border-primary bg-primary/5' : 'hover:bg-base-200'}`}
-							>
-								<input
-									type="radio"
-									name="shipping_rate"
-									checked={selectedRate?.id === rate.id}
-									onChange={() => setSelectedRate(rate)}
-									className="radio radio-primary"
-								/>
-								<div className="flex-1">
-									<div className="font-medium">{rate.name}</div>
-									<div className="text-sm text-neutral-500">
-										{rate.min_delivery_days}-{rate.max_delivery_days} business days
-									</div>
-								</div>
-								<div className="font-semibold">
-									€{rate.rate}
-								</div>
-							</label>
-						))}
-					</div>
-				)}
-
-				<div className="space-y-4">
-					<h2 className="text-xl font-semibold">Payment Details</h2>
-					<PaymentElement />
-				</div>
-
-				{message && (
-					<div className="bg-error/10 text-error p-4 rounded-lg">
-						{message}
-					</div>
-				)}
-
-				<button
-					type="submit"
-					disabled={!stripe || isLoading || !selectedRate}
-					className="btn btn-primary w-full"
-				>
-					{isLoading ? (
-						<>
-							<Loader2 className="w-4 h-4 animate-spin mr-2" />
-							Processing...
-						</>
-					) : (
-						`Pay €${total}`
-					)}
-				</button>
-			</form>
 		</div>
 	);
 }
@@ -363,11 +393,10 @@ export default function CheckoutPage() {
 
 	useEffect(() => {
 		if (cart.length === 0) {
-			router.push('/');
+			router.push('/cart');
 			return;
 		}
 
-		// Create PaymentIntent as soon as the page loads
 		fetch('/api/payment-intent', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -394,21 +423,17 @@ export default function CheckoutPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-base-100">
-			<div className="container mx-auto px-4 py-8">
-				<h1 className="text-3xl font-bold mb-8">Checkout</h1>
-
-				<Elements
-					stripe={stripePromise}
-					options={{
-						clientSecret,
-						appearance,
-						locale: 'auto',
-					}}
-				>
-					<CheckoutForm />
-				</Elements>
-			</div>
+		<div className="min-h-screen bg-neutral-50 py-12">
+			<Elements
+				stripe={stripePromise}
+				options={{
+					clientSecret,
+					appearance,
+					locale: 'auto',
+				}}
+			>
+				<CheckoutForm />
+			</Elements>
 		</div>
 	);
 }
