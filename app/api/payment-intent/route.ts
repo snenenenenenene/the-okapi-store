@@ -19,22 +19,49 @@ interface PaymentIntentRequest {
     id: string;
     rate: number;
   };
+  paymentIntentId?: string;
 }
+
+// Track recent requests to prevent duplicates
+const recentRequests = new Map<string, number>();
+const DUPLICATE_WINDOW_MS = 2000; // 2 seconds window
 
 export async function POST(req: Request) {
   try {
+    console.log("Received payment intent request");
     const body: PaymentIntentRequest = await req.json();
+
+    // Create request fingerprint
+    const requestFingerprint = JSON.stringify({
+      items: body.items,
+      shipping_rate: body.shipping_rate,
+      paymentIntentId: body.paymentIntentId,
+    });
+
+    // Check for duplicate request
+    const lastRequest = recentRequests.get(requestFingerprint);
+    if (lastRequest && Date.now() - lastRequest < DUPLICATE_WINDOW_MS) {
+      console.log("Duplicate request detected, skipping");
+      return NextResponse.json(
+        { message: "Duplicate request" },
+        { status: 429 }
+      );
+    }
+
+    // Update recent requests
+    recentRequests.set(requestFingerprint, Date.now());
+
+    // Clean up old requests
+    const now = Date.now();
+    for (const [key, timestamp] of recentRequests.entries()) {
+      if (now - timestamp > DUPLICATE_WINDOW_MS) {
+        recentRequests.delete(key);
+      }
+    }
 
     // Validate request body
     if (!Array.isArray(body.items) || body.items.length === 0) {
-      return NextResponse.json({ error: "No items provided" }, { status: 400 });
-    }
-
-    if (!body.shipping_rate) {
-      return NextResponse.json(
-        { error: "Shipping rate is required" },
-        { status: 400 }
-      );
+      throw new Error("Invalid items array");
     }
 
     // Calculate totals with explicit rounding
@@ -44,49 +71,32 @@ export async function POST(req: Request) {
       0
     );
 
-    const shippingCost = Math.round(body.shipping_rate.rate * 100);
-    const finalAmount = itemsTotal + shippingCost;
+    const shippingTotal = body.shipping_rate
+      ? Math.round(body.shipping_rate.rate * 100)
+      : 0;
+    const totalAmount = itemsTotal + shippingTotal;
 
-    // Add idempotency key to prevent duplicate charges
-    const idempotencyKey = crypto.randomUUID();
-
-    const paymentIntent = await stripe.paymentIntents.create(
-      {
-        amount: finalAmount,
+    let paymentIntent;
+    if (body.paymentIntentId) {
+      // Update existing payment intent
+      paymentIntent = await stripe.paymentIntents.update(body.paymentIntentId, {
+        amount: totalAmount,
         currency: "eur",
-        automatic_payment_methods: { enabled: true },
+      });
+    } else {
+      // Create new payment intent
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: totalAmount,
+        currency: "eur",
         metadata: {
-          items: JSON.stringify(
-            body.items.map((item) => ({
-              id: item.id,
-              variant_id: item.variant_id,
-              quantity: item.quantity,
-            }))
-          ),
-          shipping_rate: JSON.stringify(body.shipping_rate),
-          subtotal: itemsTotal.toString(),
-          shipping_cost: shippingCost.toString(),
-          total: finalAmount.toString(),
+          items: JSON.stringify(body.items),
         },
-      },
-      {
-        idempotencyKey,
-      }
-    );
+      });
+    }
 
-    return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
-    });
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
   } catch (error) {
-    console.error("Payment intent error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to create payment intent",
-      },
-      { status: 400 }
-    );
+    console.error("Error updating payment intent:", error);
+    return NextResponse.json({ error: "Failed to update payment intent" }, { status: 500 });
   }
 }
