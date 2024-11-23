@@ -7,7 +7,7 @@ import { AlertCircle, ArrowLeft, Loader2, Lock, Shield, Truck } from 'lucide-rea
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -29,15 +29,6 @@ interface ShippingRate {
 	max_delivery_days: number;
 }
 
-interface Address {
-	country: string;
-	postal_code: string;
-	city: string;
-	line1: string;
-	line2?: string;
-	state?: string;
-}
-
 function CheckoutForm() {
 	const stripe = useStripe();
 	const elements = useElements();
@@ -47,32 +38,11 @@ function CheckoutForm() {
 	const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
 	const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
 	const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
-	const [address, setAddress] = useState<{ address: Address; name?: string; phone?: string } | null>(null);
+	const [address, setAddress] = useState<any>(null);
 	const router = useRouter();
 	const { cart, clearCart, getTotalPrice } = useCartStore();
-	const [step, setStep] = useState(1);
 
-	const isAddressComplete = (addr: Address | undefined): boolean => {
-		return Boolean(
-			addr?.country &&
-			addr?.postal_code &&
-			addr?.city &&
-			addr?.line1
-		);
-	};
-
-	const haveAddressDetailsChanged = (oldAddr: Address | undefined, newAddr: Address): boolean => {
-		if (!oldAddr) return true;
-
-		return (
-			oldAddr.country !== newAddr.country ||
-			oldAddr.postal_code !== newAddr.postal_code ||
-			oldAddr.city !== newAddr.city ||
-			oldAddr.line1 !== newAddr.line1
-		);
-	};
-
-	const calculateShipping = useCallback(async (shippingAddress: Address) => {
+	const calculateShipping = async (shippingAddress: any) => {
 		if (!shippingAddress?.country) return;
 
 		setIsCalculatingShipping(true);
@@ -114,16 +84,15 @@ function CheckoutForm() {
 		} finally {
 			setIsCalculatingShipping(false);
 		}
-	}, [cart]);
+	};
 
 	const handleAddressChange = (event: any) => {
 		const newAddress = event.value;
-		const currentAddress = address?.address;
-
 		setAddress(newAddress);
 
-		if (isAddressComplete(newAddress?.address) &&
-			haveAddressDetailsChanged(currentAddress, newAddress.address)) {
+		if (newAddress?.address?.country &&
+			newAddress?.address?.postal_code &&
+			newAddress?.address?.city) {
 			calculateShipping(newAddress.address);
 		}
 	};
@@ -131,67 +100,72 @@ function CheckoutForm() {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
-		if (!stripe || !elements || !selectedRate || !address) {
-			setMessage('Please complete all required fields');
+		if (!stripe || !elements) {
+			return;
+		}
+
+		// Validate all required fields first
+		if (!email || !address?.phone || !selectedRate) {
+			setMessage('Please fill in all required fields');
 			return;
 		}
 
 		setIsLoading(true);
 
 		try {
-			// Create final payment intent with shipping info on server side
+			// First validate all required fields with Stripe Elements
+			const { error: validationError } = await elements.submit();
+			if (validationError) {
+				setMessage(validationError.message);
+				setIsLoading(false);
+				return;
+			}
+
+			// Only create payment intent if validation passed
 			const response = await fetch('/api/payment-intent', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					payment_intent_id: localStorage.getItem('payment_intent_id'),
-					shipping_rate: selectedRate,
-					amount: getTotalPrice() + selectedRate.rate,
-					shipping_address: address,
-					items: cart
+					items: cart,
+					shipping_rate: selectedRate
 				}),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to update payment intent');
+				throw new Error('Failed to create payment intent');
 			}
 
-			const { error } = await stripe.confirmPayment({
+			const { clientSecret } = await response.json();
+
+			const { error: confirmError } = await stripe.confirmPayment({
 				elements,
 				confirmParams: {
 					return_url: `${window.location.origin}/checkout/success`,
-					receipt_email: email,
 					payment_method_data: {
 						billing_details: {
-							email,
 							name: address.name,
-							address: {
-								line1: address.address.line1,
-								line2: address.address.line2 || '',
-								city: address.address.city,
-								state: address.address.state,
-								postal_code: address.address.postal_code,
-								country: address.address.country,
-							},
+							email: email,
+							phone: address.phone,
 						},
 					},
 				},
 			});
 
-			if (error) {
-				setMessage(error.message || "An error occurred");
-			} else {
-				clearCart();
-				localStorage.removeItem('payment_intent_id');
+			if (confirmError) {
+				// Only show the error if it's not because user closed the window
+				if (confirmError.type !== 'validation_error') {
+					setMessage(confirmError.message);
+				}
+				return;
 			}
+
 		} catch (error) {
 			console.error('Payment error:', error);
-			setMessage("Payment processing failed. Please try again.");
+			setMessage(typeof error === 'string' ? error : 'An error occurred with the payment');
 		} finally {
 			setIsLoading(false);
 		}
 	};
-
 
 	const subtotal = getTotalPrice();
 	const shippingCost = selectedRate?.rate || 0;
@@ -271,10 +245,7 @@ function CheckoutForm() {
 				<div className="order-1 lg:order-2">
 					<form onSubmit={handleSubmit} className="space-y-8">
 						<div className="bg-white rounded-lg shadow-sm p-6">
-							<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-								<span>1. Contact Information</span>
-								{step === 1 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
-							</h3>
+							<h3 className="text-lg font-semibold mb-4">Contact Information</h3>
 							<LinkAuthenticationElement
 								options={{
 									defaultValues: { email },
@@ -284,10 +255,7 @@ function CheckoutForm() {
 						</div>
 
 						<div className="bg-white rounded-lg shadow-sm p-6">
-							<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-								<span>2. Shipping Address</span>
-								{step === 2 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
-							</h3>
+							<h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
 							<AddressElement
 								options={{
 									mode: 'shipping',
@@ -314,10 +282,7 @@ function CheckoutForm() {
 							</div>
 						) : shippingRates.length > 0 && (
 							<div className="bg-white rounded-lg shadow-sm p-6">
-								<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-									<span>3. Shipping Method</span>
-									{step === 3 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
-								</h3>
+								<h3 className="text-lg font-semibold mb-4">Shipping Method</h3>
 								<div className="space-y-3">
 									{shippingRates.map((rate) => (
 										<label
@@ -348,10 +313,7 @@ function CheckoutForm() {
 						)}
 
 						<div className="bg-white rounded-lg shadow-sm p-6">
-							<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-								<span>4. Payment</span>
-								{step === 4 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
-							</h3>
+							<h3 className="text-lg font-semibold mb-4">Payment Method</h3>
 							<PaymentElement />
 						</div>
 
@@ -364,7 +326,7 @@ function CheckoutForm() {
 
 						<button
 							type="submit"
-							disabled={!stripe || isLoading || !selectedRate}
+							disabled={!stripe || isLoading || !selectedRate || !address?.phone || !email}
 							className="w-full btn btn-primary btn-lg gap-2"
 						>
 							{isLoading ? (
@@ -401,14 +363,12 @@ export default function CheckoutPage() {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				items: cart,
-				payment_intent_id: localStorage.getItem('payment_intent_id'),
+				items: cart
 			}),
 		})
 			.then((res) => res.json())
 			.then((data) => {
 				setClientSecret(data.clientSecret);
-				localStorage.setItem('payment_intent_id', data.payment_intent_id);
 			});
 	}, [cart, router]);
 

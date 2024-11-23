@@ -3,9 +3,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
+const stripePromise = loadStripe(`${process.env.STRIPE_SECRET_KEY!}`);
 
 interface CartItem {
   id: string;
