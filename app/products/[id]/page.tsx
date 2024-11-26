@@ -82,15 +82,20 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
   };
 
   const handleAddToCart = () => {
+    console.log("Selected variant:", selectedVariant);
     if (selectedVariant) {
-      addToCart({
-        id: selectedVariant.id.toString(),
-        name: product.name,
+      const cartItem = {
+        id: product.id, // Use product.id as the base product ID
+        variant_id: selectedVariant.id, // This is the important part for shipping calculation
+        name: `${product.name} - ${selectedVariant.size}`, // Include size in name
         price: parseFloat(selectedVariant.price),
         quantity: 1,
         image: productImage,
-        variant_id: selectedVariant.id,
-      });
+        size: selectedVariant.size, // Optional: include size as separate field
+      };
+
+      console.log("Adding to cart:", cartItem);
+      addToCart(cartItem);
     }
   };
 

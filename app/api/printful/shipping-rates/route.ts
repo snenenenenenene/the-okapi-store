@@ -1,90 +1,91 @@
-// app/api/printful/shipping-rates/route.ts
 import { NextResponse } from "next/server";
 
 const PRINTFUL_API_URL = "https://api.printful.com";
 const PRINTFUL_TOKEN = process.env.PRINTFUL_TOKEN;
-const PRINTFUL_STORE_ID = process.env.PRINTFUL_STORE_ID; // Required for account-level tokens
 
 export async function POST(req: Request) {
   try {
-    const {
-      address,
-      items,
-      currency = "USD",
-      locale = "en_US",
-    } = await req.json();
+    const { address, items } = await req.json();
 
-    console.log(items);
+    console.log("Received shipping request:", { address, items });
 
-    // Validate and prepare items
-    const validatedItems = items.map((item: any) => ({
-      variant_id: item.variant_id, // Use the passed variant_id directly
+    if (!PRINTFUL_TOKEN) {
+      throw new Error("Printful API key is not configured");
+    }
+
+    if (!address || !items || !Array.isArray(items)) {
+      return NextResponse.json(
+        { error: "Invalid request data" },
+        { status: 400 }
+      );
+    }
+
+    // Validate items have variant_id
+    if (items.some((item: any) => !item.variant_id)) {
+      throw new Error("All items must have a variant_id");
+    }
+
+    const printfulItems = items.map((item: any) => ({
+      sync_variant_id: parseInt(String(item.variant_id)),
       quantity: item.quantity,
-      value: item.price.toString(), // Convert price to string for Printful
     }));
 
-    // Construct the shipping request payload
-    const shippingRequest = {
+    console.log("Formatted items for Printful:", printfulItems);
+
+    const requestBody = {
       recipient: {
         address1: address.address1,
+        address2: address.address2 || "",
         city: address.city,
+        state_code: address.state || "",
         country_code: address.country,
-        state_code: address.state,
         zip: address.zip,
-        phone: address.phone || undefined,
       },
-      items: validatedItems,
-      currency,
-      locale,
+      items: printfulItems,
+      currency: "EUR",
     };
 
-    console.log(
-      "Shipping request payload:",
-      JSON.stringify(shippingRequest, null, 2)
-    );
+    console.log("Sending to Printful:", JSON.stringify(requestBody, null, 2));
 
-    // Fetch shipping rates from Printful API
     const response = await fetch(`${PRINTFUL_API_URL}/shipping/rates`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${PRINTFUL_TOKEN}`,
         "Content-Type": "application/json",
-        ...(PRINTFUL_STORE_ID && { "X-PF-Store-Id": PRINTFUL_STORE_ID }),
       },
-      body: JSON.stringify(shippingRequest),
+      body: JSON.stringify(requestBody),
     });
 
-    const data = await response.json();
+    const responseData = await response.json();
+    console.log("Printful response:", JSON.stringify(responseData, null, 2));
 
     if (!response.ok) {
-      console.error("Error response from Printful:", data);
       throw new Error(
-        `Shipping calculation failed: ${data.error?.message || "Unknown error"}`
+        responseData.error?.message || "Failed to fetch shipping rates"
       );
     }
 
-    console.log("Printful shipping response:", JSON.stringify(data, null, 2));
+    if (!responseData.result || !Array.isArray(responseData.result)) {
+      throw new Error("Invalid response from Printful");
+    }
 
-    // Return formatted shipping rates
-    return NextResponse.json(
-      data.result.map((rate: any) => ({
-        id: rate.id,
-        name: rate.name,
-        rate: rate.rate,
-        min_delivery_days: rate.min_delivery_days,
-        max_delivery_days: rate.max_delivery_days,
-      }))
-    );
+    const formattedRates = responseData.result.map((rate) => ({
+      id: rate.id,
+      name: rate.name,
+      rate: parseFloat(rate.rate),
+      min_delivery_days: rate.min_delivery_days,
+      max_delivery_days: rate.max_delivery_days,
+    }));
+
+    return NextResponse.json(formattedRates);
   } catch (error) {
-    console.error("Error fetching shipping rates:", error);
+    console.error("Shipping rates error:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to calculate shipping rates",
+        error: "Failed to calculate shipping rates",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }

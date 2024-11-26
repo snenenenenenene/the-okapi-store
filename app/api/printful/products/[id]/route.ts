@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/printful/products/[id]/route.ts
 import { NextResponse } from "next/server";
 
 const PRINTFUL_API_URL = "https://api.printful.com";
@@ -29,6 +28,11 @@ export async function GET(
     const product = {
       id: product_data.sync_product.id,
       name: product_data.sync_product.name,
+      description:
+        product_data.sync_product.description ||
+        "A unique piece from The Okapi Store",
+      thumbnail_url: product_data.sync_product.thumbnail_url,
+      image: product_data.sync_product.thumbnail_url,
       variants: product_data.sync_variants.map((variant: any) => ({
         id: variant.variant_id,
         name: variant.name,
@@ -47,7 +51,7 @@ export async function GET(
       })),
     };
 
-    console.log(product_data);
+    console.log("Processed product data:", product);
 
     return NextResponse.json(product);
   } catch (error) {

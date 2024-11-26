@@ -5,98 +5,82 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  variant_id: string;
-}
-
-interface PaymentIntentRequest {
-  items: CartItem[];
-  shipping_rate?: {
-    id: string;
-    rate: number;
-  };
-  paymentIntentId?: string;
-}
-
-// Track recent requests to prevent duplicates
-const recentRequests = new Map<string, number>();
-const DUPLICATE_WINDOW_MS = 2000; // 2 seconds window
+// Create a Map to store recent requests
+const recentRequests = new Map();
+const DUPLICATE_WINDOW = 2000; // 2 seconds
 
 export async function POST(req: Request) {
   try {
-    console.log("Received payment intent request");
-    const body: PaymentIntentRequest = await req.json();
+    const body = await req.json();
 
-    // Create request fingerprint
-    const requestFingerprint = JSON.stringify({
-      items: body.items,
-      shipping_rate: body.shipping_rate,
-      paymentIntentId: body.paymentIntentId,
-    });
+    // Create a request fingerprint
+    const requestFingerprint = JSON.stringify(body);
 
     // Check for duplicate request
-    const lastRequest = recentRequests.get(requestFingerprint);
-    if (lastRequest && Date.now() - lastRequest < DUPLICATE_WINDOW_MS) {
-      console.log("Duplicate request detected, skipping");
+    const lastRequestTime = recentRequests.get(requestFingerprint);
+    if (lastRequestTime && Date.now() - lastRequestTime < DUPLICATE_WINDOW) {
       return NextResponse.json(
-        { message: "Duplicate request" },
+        { error: "Duplicate request detected" },
         { status: 429 }
       );
     }
 
-    // Update recent requests
+    // Store the request timestamp
     recentRequests.set(requestFingerprint, Date.now());
 
     // Clean up old requests
     const now = Date.now();
     for (const [key, timestamp] of recentRequests.entries()) {
-      if (now - timestamp > DUPLICATE_WINDOW_MS) {
+      if (now - timestamp > DUPLICATE_WINDOW) {
         recentRequests.delete(key);
       }
     }
 
-    // Validate request body
-    if (!Array.isArray(body.items) || body.items.length === 0) {
-      throw new Error("Invalid items array");
-    }
+    const { items, shipping_rate, paymentIntentId } = body;
 
-    // Calculate totals with explicit rounding
-    const itemsTotal = body.items.reduce(
-      (acc: number, item: CartItem) =>
-        acc + Math.round(item.price * 100) * item.quantity,
+    // Calculate the amount in cents
+    const subtotal = items.reduce(
+      (sum: number, item: any) =>
+        sum + Math.round(item.price * 100) * item.quantity,
       0
     );
 
-    const shippingTotal = body.shipping_rate
-      ? Math.round(body.shipping_rate.rate * 100)
+    // Add shipping if provided
+    const shippingAmount = shipping_rate
+      ? Math.round(shipping_rate.rate * 100)
       : 0;
-    const totalAmount = itemsTotal + shippingTotal;
+    const totalAmount = subtotal + shippingAmount;
 
     let paymentIntent;
-    if (body.paymentIntentId) {
+
+    if (paymentIntentId) {
       // Update existing payment intent
-      paymentIntent = await stripe.paymentIntents.update(body.paymentIntentId, {
+      paymentIntent = await stripe.paymentIntents.update(paymentIntentId, {
         amount: totalAmount,
-        currency: "eur",
       });
     } else {
       // Create new payment intent
       paymentIntent = await stripe.paymentIntents.create({
         amount: totalAmount,
         currency: "eur",
+        automatic_payment_methods: {
+          enabled: true,
+        },
         metadata: {
-          items: JSON.stringify(body.items),
+          items: JSON.stringify(items),
         },
       });
     }
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
+    return NextResponse.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    });
   } catch (error) {
-    console.error("Error updating payment intent:", error);
-    return NextResponse.json({ error: "Failed to update payment intent" }, { status: 500 });
+    console.error("Payment intent error:", error);
+    return NextResponse.json(
+      { error: "Error creating payment intent" },
+      { status: 500 }
+    );
   }
 }

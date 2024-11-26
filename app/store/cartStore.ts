@@ -3,7 +3,9 @@ import { loadStripe } from "@stripe/stripe-js";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-const stripePromise = loadStripe(`${process.env.STRIPE_SECRET_KEY!}`);
+const stripePromise = loadStripe(
+  `${process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!}`
+);
 
 interface CartItem {
   id: string;
@@ -12,20 +14,29 @@ interface CartItem {
   quantity: number;
   image: string;
   variant_id: number;
+  size?: string;
 }
 
-interface Product extends Omit<CartItem, "quantity"> {
+interface Product extends Omit<CartItem, "quantity" | "size"> {
   description: string;
   category: string;
-  inStock: number;
+  inStock: boolean;
+  variants: Array<{
+    id: number;
+    name: string;
+    price: number;
+    size: string;
+    inStock: boolean;
+  }>;
 }
 
 interface CartStore {
   products: Product[];
   cart: CartItem[];
   isCartOpen: boolean;
+  isLoading: boolean;
   fetchProducts: () => Promise<void>;
-  addToCart: (product: CartItem) => void;
+  addToCart: (item: CartItem) => void;
   removeFromCart: (productId: string) => void;
   updateCartItemQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -41,36 +52,56 @@ export const useCartStore = create<CartStore>()(
       products: [],
       cart: [],
       isCartOpen: false,
+      isLoading: false,
 
       fetchProducts: async () => {
         try {
+          set({ isLoading: true });
           const response = await fetch("/api/printful/products");
-          if (response.ok) {
-            const products = await response.json();
-            set({ products });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
+
+          const products = await response.json();
+          set({ products, isLoading: false });
         } catch (error) {
           console.error("Failed to fetch products:", error);
+          set({ isLoading: false });
         }
       },
 
-      addToCart: (product) =>
+      addToCart: (item) =>
         set((state) => {
-          trackEvent.addToCart(product);
+          trackEvent.addToCart(item);
+
+          console.log("Adding item to cart:", item);
           const existingItem = state.cart.find(
-            (item) => item.id === product.id
+            (cartItem) => cartItem.variant_id === item.variant_id
           );
+
           if (existingItem) {
+            console.log("Updating existing item quantity");
             return {
-              cart: state.cart.map((item) =>
-                item.id === product.id
-                  ? { ...item, quantity: item.quantity + 1 }
-                  : item
+              cart: state.cart.map((cartItem) =>
+                cartItem.variant_id === item.variant_id
+                  ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                  : cartItem
               ),
             };
-          } else {
-            return { cart: [...state.cart, { ...product, quantity: 1 }] };
           }
+
+          console.log("Adding new item to cart");
+          return {
+            cart: [
+              ...state.cart,
+              {
+                ...item,
+                price: Number(item.price), // Ensure price is a number
+                quantity: 1,
+              },
+            ],
+          };
         }),
 
       removeFromCart: (productId) =>
@@ -78,7 +109,7 @@ export const useCartStore = create<CartStore>()(
           cart: state.cart.filter((item) => item.id !== productId),
         })),
 
-      updateCartItemQuantity: (productId, quantity) =>
+      updateCartItemQuantity: (productId: string, quantity: number) =>
         set((state) => ({
           cart: state.cart.map((item) =>
             item.id === productId ? { ...item, quantity } : item
@@ -94,7 +125,7 @@ export const useCartStore = create<CartStore>()(
 
       getTotalPrice: () =>
         get().cart.reduce(
-          (total, item) => Number(total) + Number(item.price) * item.quantity,
+          (total, item) => total + Number(item.price) * item.quantity,
           0
         ),
 
@@ -102,24 +133,45 @@ export const useCartStore = create<CartStore>()(
         const stripe = await stripePromise;
         if (!stripe) throw new Error("Stripe failed to load");
 
-        const response = await fetch("/api/stripe/create-checkout-session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ items: get().cart }),
-        });
+        try {
+          const cartItems = get().cart.map((item) => ({
+            ...item,
+            price: Number(item.price), // Ensure price is a number
+          }));
 
-        const { sessionId } = await response.json();
+          const response = await fetch("/api/stripe/create-checkout-session", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              items: cartItems,
+            }),
+          });
 
-        const { error } = await stripe.redirectToCheckout({ sessionId });
-        if (error) throw new Error(error.message);
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.message || "Failed to create checkout session"
+            );
+          }
+
+          const { sessionId } = await response.json();
+          console.log("Created checkout session:", sessionId);
+
+          const { error } = await stripe.redirectToCheckout({ sessionId });
+          if (error) {
+            console.error("Stripe redirect error:", error);
+            throw error;
+          }
+        } catch (error) {
+          console.error("Checkout error:", error);
+          throw error;
+        }
       },
     }),
     {
       name: "okapi-cart",
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      //@ts-ignore
       getStorage: () => localStorage,
     }
   )
