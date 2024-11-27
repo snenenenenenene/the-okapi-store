@@ -1,8 +1,7 @@
-// /app/api/stripe/create-checkout-session/route.ts
 import { STRIPE_API_VERSION } from "@/utils/env";
+import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -14,12 +13,16 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     const { items } = await req.json();
 
-    if (!items?.length) {
-      return NextResponse.json(
-        { error: "No items in cart" },
-        { status: 400 }
-      );
-    }
+    console.log("Received create checkout session request:", items);
+
+    // if (!items?.length) {
+    //   return NextResponse.json({ error: "No items in cart" }, { status: 400 });
+    // }
+
+    console.log(
+      "Creating checkout session with items:",
+      JSON.stringify(items, null, 2)
+    );
 
     // Create line items for Stripe
     const lineItems = items.map((item: any) => ({
@@ -73,15 +76,22 @@ export async function POST(req: Request) {
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/cancel`,
       metadata: {
         cartItems: JSON.stringify(items),
-        userId: session?.user?.id || 'guest',
+        userId: session?.user?.id || "guest",
+      },
+      payment_intent_data: {
+        metadata: {
+          cartItems: JSON.stringify(items),
+          userId: session?.user?.id || "guest",
+        },
       },
       customer_email: session?.user?.email,
     });
 
-    return NextResponse.json({ 
+    console.log("Checkout session created:", checkoutSession.id);
+
+    return NextResponse.json({
       sessionId: checkoutSession.id,
     });
-
   } catch (error) {
     console.error("Stripe session creation error:", error);
     return NextResponse.json(

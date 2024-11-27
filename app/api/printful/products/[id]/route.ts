@@ -25,6 +25,8 @@ export async function GET(
     const json = await response.json();
     const product_data = json.result;
 
+    console.log("Fetched product data from Printful:", product_data);
+
     const product = {
       id: product_data.sync_product.id,
       name: product_data.sync_product.name,
@@ -35,6 +37,8 @@ export async function GET(
       image: product_data.sync_product.thumbnail_url,
       variants: product_data.sync_variants.map((variant: any) => ({
         id: variant.variant_id,
+        sync_variant_id: variant.sync_product_id,
+        external_id: variant.external_id,
         name: variant.name,
         price: variant.retail_price,
         size: variant.size,

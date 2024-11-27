@@ -22,20 +22,20 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 		return {
 			title: `${product.name} | The Okapi Store`,
 			description: product.description || 'A unique piece from The Okapi Store',
-			openGraph: {
-				title: `${product.name} | The Okapi Store`,
-				description: product.description || 'A unique piece from The Okapi Store',
-				url: `${BASE_URL}/products/${params.id}`,
-				images: [
-					{
-						url: mainImage,
-						width: 800,
-						height: 600,
-						alt: product.name,
-					},
-				],
-				type: 'product',
-			},
+			// openGraph: {
+			// 	title: `${product.name} | The Okapi Store`,
+			// 	description: product.description || 'A unique piece from The Okapi Store',
+			// 	url: `${BASE_URL}/products/${params.id}`,
+			// 	images: [
+			// 		{
+			// 			url: mainImage,
+			// 			width: 800,
+			// 			height: 600,
+			// 			alt: product.name,
+			// 		},
+			// 	],
+			// 	type: 'product',
+			// },
 			twitter: {
 				card: "summary_large_image",
 				title: `${product.name} | The Okapi Store`,

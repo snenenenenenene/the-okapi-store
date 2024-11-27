@@ -1,109 +1,264 @@
 import prisma from "@/lib/prisma";
-import { headers } from "next/headers";
+import { sendOrderConfirmationEmail } from "@/utils/emailService";
+import { createPrintfulOrder } from "@/utils/printful";
+import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { authOptions } from "../../auth/[...nextauth]/options";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
 
-const PRINTFUL_API_URL = "https://api.printful.com";
-const PRINTFUL_TOKEN = process.env.PRINTFUL_API_KEY!;
-
-async function createPrintfulOrder(session: Stripe.Checkout.Session) {
-  const cartItems = JSON.parse(session.metadata?.cartItems || "[]");
-  const shippingDetails = session.shipping_details;
-
-  if (!shippingDetails?.address) {
-    throw new Error("No shipping address provided");
-  }
-
-  const printfulOrderData = {
-    recipient: {
-      name: session.shipping_details?.name,
-      address1: shippingDetails.address.line1,
-      address2: shippingDetails.address.line2,
-      city: shippingDetails.address.city,
-      state_code: shippingDetails.address.state,
-      country_code: shippingDetails.address.country,
-      zip: shippingDetails.address.postal_code,
-      email: session.customer_details?.email,
-    },
-    items: cartItems.map((item: any) => ({
-      sync_variant_id: parseInt(item.variant_id),
-      quantity: item.quantity,
-    })),
-    retail_costs: {
-      currency: "EUR",
-      subtotal: session.amount_subtotal ? session.amount_subtotal / 100 : 0,
-      total: session.amount_total ? session.amount_total / 100 : 0,
-    },
-  };
-
-  const response = await fetch(`${PRINTFUL_API_URL}/orders`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${PRINTFUL_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(printfulOrderData),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Printful order creation failed: ${JSON.stringify(error)}`);
-  }
-
-  return response.json();
-}
-
 export async function POST(req: Request) {
-  const body = await req.text();
-  const signature = headers().get("stripe-signature") as string;
+  console.log("Webhook received");
+
+  const payload = await req.text();
+  const signature = req.headers.get("stripe-signature");
+
+  if (!signature) {
+    console.error("No signature found");
+    return NextResponse.json({ error: "No signature found" }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
 
   try {
-    const event = stripe.webhooks.constructEvent(
-      body,
+    event = stripe.webhooks.constructEvent(
+      payload,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
+    console.log(`Event constructed successfully. Type: ${event.type}`);
+  } catch (err: any) {
+    console.error("Webhook signature verification failed:", err.message);
+    return NextResponse.json(
+      { error: `Webhook Error: ${err.message}` },
+      { status: 400 }
+    );
+  }
 
-    console.log("Webhook event received:", event.type);
+  try {
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "charge.succeeded"
+    ) {
+      console.log("Processing event:", event.type);
 
-    if (event.type === "payment_intent.succeeded") {
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      let charge: Stripe.Charge;
+      let session: Stripe.Checkout.Session | null = null;
 
-      // Retrieve the payment intent with expanded payment method
-      const expandedPaymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntent.id,
-        {
-          expand: ["payment_method", "customer"],
-        }
+      if (event.type === "charge.succeeded") {
+        charge = event.data.object as Stripe.Charge;
+      } else {
+        // For checkout.session.completed, get the charge from the payment intent
+        session = event.data.object as Stripe.Checkout.Session;
+        const paymentIntent = await stripe.paymentIntents.retrieve(
+          session.payment_intent as string
+        );
+        const charges = await stripe.charges.list({
+          payment_intent: paymentIntent.id,
+        });
+        charge = charges.data[0];
+      }
+
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        charge.payment_intent as string
       );
 
-      // Create Printful order
-      const printfulOrder = await createPrintfulOrder(expandedPaymentIntent);
+      if (!session) {
+        const sessions = await stripe.checkout.sessions.list({
+          payment_intent: paymentIntent.id,
+          limit: 1,
+        });
+        session = sessions.data[0];
+      }
 
-      // Create order in your database
-      const order = await prisma.order.create({
-        data: {
-          stripePaymentId: paymentIntent.id,
-          printfulId: printfulOrder.id,
-          status: "processing",
-          total: paymentIntent.amount / 100,
-          // Add other order details as needed
+      // Get both the customer email and the logged-in user's email
+      const customerEmail =
+        charge.billing_details.email || session?.customer_details?.email;
+      const serverSession = await getServerSession(authOptions);
+      const loggedInEmail = serverSession?.user?.email;
+
+      console.log("Customer Email:", customerEmail);
+      console.log("Logged In Email:", loggedInEmail);
+
+      // Create Printful order
+      const printfulOrder = await createPrintfulOrder(
+        charge,
+        paymentIntent,
+        session
+      );
+      console.log("Printful order created:", printfulOrder);
+
+      // Ensure both users exist in our system
+      const [customerUser, loggedInUser] = await Promise.all([
+        // Create or get customer user
+        prisma.user.upsert({
+          where: { email: customerEmail || `guest_${Date.now()}@example.com` },
+          update: {},
+          create: {
+            email: customerEmail || `guest_${Date.now()}@example.com`,
+            name:
+              charge.billing_details.name ||
+              session?.customer_details?.name ||
+              "Customer",
+            role: "user",
+            credits: 0,
+          },
+        }),
+        // Create or get logged-in user if different from customer
+        loggedInEmail && loggedInEmail !== customerEmail
+          ? prisma.user.upsert({
+              where: { email: loggedInEmail },
+              update: {},
+              create: {
+                email: loggedInEmail,
+                name: serverSession?.user?.name || "User",
+                role: "user",
+                credits: 0,
+              },
+            })
+          : null,
+      ]);
+
+      console.log("Customer User:", customerUser?.id);
+      console.log("Logged In User:", loggedInUser?.id);
+
+      // Ensure products exist in database
+      const cartItems = JSON.parse(
+        session?.metadata?.cartItems || paymentIntent.metadata.cartItems
+      );
+      await Promise.all(
+        cartItems.map(async (item: any) => {
+          await prisma.product.upsert({
+            where: { id: item.id },
+            update: {},
+            create: {
+              id: item.id,
+              name: item.name,
+              description: item.name,
+              price: parseFloat(item.price),
+              image: item.image,
+              inStock: 1,
+            },
+          });
+        })
+      );
+
+      // Check if order already exists
+      const existingOrder = await prisma.order.findFirst({
+        where: {
+          OR: [
+            { stripeSessionId: session?.id },
+            { stripePaymentId: paymentIntent.id },
+          ],
         },
       });
 
-      console.log("Order created:", order.id);
+      if (existingOrder) {
+        console.log("Order already exists:", existingOrder.id);
+        return NextResponse.json({
+          received: true,
+          orderId: existingOrder.id,
+          printfulOrder,
+        });
+      }
+
+      // Create the order
+      const order = await prisma.order.create({
+        data: {
+          userId: customerUser.id, // Primary owner is the customer
+          status: "processing",
+          total: charge.amount / 100,
+          stripeSessionId: session?.id,
+          stripePaymentId: paymentIntent.id,
+          printfulId: printfulOrder?.id,
+          orderItems: {
+            create: cartItems.map((item: any) => ({
+              quantity: item.quantity,
+              price: parseFloat(item.price),
+              product: {
+                connect: { id: item.id },
+              },
+            })),
+          },
+        },
+        include: {
+          orderItems: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      });
+
+      // Create order associations
+      await prisma.orderAssociation.create({
+        data: {
+          orderId: order.id,
+          userId: customerUser.id,
+          type: "CUSTOMER",
+        },
+      });
+
+      // Add logged-in user association if different from customer
+      if (loggedInUser && loggedInUser.id !== customerUser.id) {
+        await prisma.orderAssociation.create({
+          data: {
+            orderId: order.id,
+            userId: loggedInUser.id,
+            type: "CREATOR",
+          },
+        });
+      }
+
+      // Send confirmation emails to both users
+      const emailPromises: Promise<void>[] = [];
+
+      if (customerEmail) {
+        emailPromises.push(
+          sendOrderConfirmationEmail(
+            customerEmail,
+            order.id,
+            order.orderItems,
+            order.total,
+            printfulOrder
+          )
+        );
+      }
+
+      if (loggedInEmail && loggedInEmail !== customerEmail) {
+        emailPromises.push(
+          sendOrderConfirmationEmail(
+            loggedInEmail,
+            order.id,
+            order.orderItems,
+            order.total,
+            printfulOrder
+          )
+        );
+      }
+
+      await Promise.all(emailPromises);
+
+      console.log("Order process completed successfully");
+      return NextResponse.json({
+        received: true,
+        orderId: order.id,
+        printfulOrder,
+      });
     }
 
     return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("Webhook error:", error);
+  } catch (error: any) {
+    console.error("Error processing webhook:", error);
     return NextResponse.json(
-      { error: "Webhook handler failed" },
-      { status: 400 }
+      {
+        error: "Failed to process webhook",
+        details: error.message,
+      },
+      { status: 500 }
     );
   }
 }
