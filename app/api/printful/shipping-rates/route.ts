@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     }
 
     const printfulItems = items.map((item: any) => ({
+      variant_id: parseInt(String(item.variant_id)),
       sync_variant_id: parseInt(String(item.variant_id)),
       quantity: item.quantity,
     }));

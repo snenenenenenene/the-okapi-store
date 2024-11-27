@@ -68,7 +68,16 @@ function useCheckoutFlow() {
 					zip: address.address.postal_code
 				};
 
-				console.log('Sending address to shipping calculation:', shippingAddress);
+				console.log('Sending data to shipping calculation:', JSON.stringify({
+					address: shippingAddress,
+					items: cart.map(item => ({
+						variant_id: item.variant_id,
+						quantity: item.quantity,
+						price: item.price
+					}))
+				}));
+
+
 
 				const response = await fetch('/api/printful/shipping-rates', {
 					method: 'POST',

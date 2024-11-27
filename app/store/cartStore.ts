@@ -1,3 +1,4 @@
+// app/store/cartStore.ts
 import { trackEvent } from "@/utils/analytics";
 import { loadStripe } from "@stripe/stripe-js";
 import { create } from "zustand";
@@ -9,11 +10,11 @@ const stripePromise = loadStripe(
 
 interface CartItem {
   id: string;
+  variant_id: number;
   name: string;
   price: number;
   quantity: number;
   image: string;
-  variant_id: number;
   size?: string;
 }
 
@@ -73,9 +74,15 @@ export const useCartStore = create<CartStore>()(
 
       addToCart: (item) =>
         set((state) => {
-          trackEvent.addToCart(item);
+          // Validate required variant_id
+          if (!item.variant_id) {
+            console.error("Attempted to add item without variant_id:", item);
+            throw new Error("variant_id is required for cart items");
+          }
 
+          trackEvent.addToCart(item);
           console.log("Adding item to cart:", item);
+
           const existingItem = state.cart.find(
             (cartItem) => cartItem.variant_id === item.variant_id
           );
@@ -97,7 +104,7 @@ export const useCartStore = create<CartStore>()(
               ...state.cart,
               {
                 ...item,
-                price: Number(item.price), // Ensure price is a number
+                price: Number(item.price),
                 quantity: 1,
               },
             ],
@@ -136,7 +143,7 @@ export const useCartStore = create<CartStore>()(
         try {
           const cartItems = get().cart.map((item) => ({
             ...item,
-            price: Number(item.price), // Ensure price is a number
+            price: Number(item.price),
           }));
 
           const response = await fetch("/api/stripe/create-checkout-session", {

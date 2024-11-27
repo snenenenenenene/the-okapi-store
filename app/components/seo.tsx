@@ -1,6 +1,6 @@
+import Head from 'next/head';
 import React from 'react';
 import { jsonLdScriptProps } from 'react-schemaorg';
-import Head from 'next/head';
 
 interface SeoProps {
 	title: string;

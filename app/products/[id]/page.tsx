@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { ProductJsonLd } from "@/app/components/productJSONLd";
-import { SEO } from "@/app/components/seo";
+
 import { useCartStore } from "@/store/cartStore";
 import { formatEuroPrice } from "@/utils/formatters";
 import { AnimatePresence, motion } from "framer-motion";
@@ -16,6 +14,8 @@ interface Variant {
   size: string;
   currency: string;
   availability_status: string;
+  thumbnailUrl?: string;
+  previewUrl?: string;
 }
 
 export default function ProductDetail({ params }: { params: { id: string } }) {
@@ -35,8 +35,10 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
         if (response.ok) {
           const data = await response.json();
           setProduct(data);
-          setSelectedVariant(data.variants[0]);
-          setProductImage(data.variants[0]?.previewUrl || data.image);
+          if (data.variants && data.variants.length > 0) {
+            setSelectedVariant(data.variants[0]);
+            setProductImage(data.variants[0]?.previewUrl || data.image);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch product:", error);
@@ -46,7 +48,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
     fetchProduct();
   }, [params.id]);
 
-  // Update button positions when window resizes or component mounts
   useEffect(() => {
     const updateButtonPositions = () => {
       if (!sizePickerRef.current) return;
@@ -72,26 +73,18 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
     return () => window.removeEventListener('resize', updateButtonPositions);
   }, [product]);
 
-  if (!product || !selectedVariant) {
-    return <div>Loading...</div>;
-  }
-
-  const handleVariantChange = (variant: Variant) => {
-    setSelectedVariant(variant);
-    setHoveredSize(null);
-  };
-
   const handleAddToCart = () => {
-    console.log("Selected variant:", selectedVariant);
     if (selectedVariant) {
+      console.log("Selected variant:", selectedVariant);
+
       const cartItem = {
-        id: product.id, // Use product.id as the base product ID
-        variant_id: selectedVariant.id, // This is the important part for shipping calculation
-        name: `${product.name} - ${selectedVariant.size}`, // Include size in name
+        id: product.id,
+        variant_id: selectedVariant.id,
+        name: `${product.name} - ${selectedVariant.size}`,
         price: parseFloat(selectedVariant.price),
         quantity: 1,
         image: productImage,
-        size: selectedVariant.size, // Optional: include size as separate field
+        size: selectedVariant.size
       };
 
       console.log("Adding to cart:", cartItem);
@@ -99,23 +92,51 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
     }
   };
 
+  const handleVariantChange = (variant: Variant) => {
+    console.log("Changing variant to:", variant);
+    setSelectedVariant(variant);
+    if (variant.previewUrl) {
+      setProductImage(variant.previewUrl);
+    }
+    setHoveredSize(null);
+  };
+
   const getIndicatorPosition = () => {
     const index = hoveredSize !== null
       ? hoveredSize
-      : product.variants.findIndex((v: Variant) => v.id === selectedVariant.id);
+      : product.variants.findIndex((v: Variant) => v.id === selectedVariant?.id);
 
     return sizeButtonPositions[index] || { x: 0, y: 0 };
   };
 
+  if (!product || !selectedVariant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <>
-      <SEO
+      {/* <SEO
         title={product.name}
         description={product.description}
         image={productImage}
-        type="product"
-      />
-      <ProductJsonLd product={product} />
+        type="website"
+        openGraph={{
+          type: "website",
+          title: product.name,
+          description: product.description,
+          images: [
+            {
+              url: productImage,
+              alt: product.name
+            }
+          ]
+        }}
+      /> */}
+      {/* <ProductJsonLd product={product} /> */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
