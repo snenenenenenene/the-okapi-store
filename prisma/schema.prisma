@@ -123,7 +123,6 @@ model Product {
   description String
   price       Float
   image       String
-  inStock     Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orderItems  OrderItem[]

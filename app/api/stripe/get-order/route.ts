@@ -1,9 +1,8 @@
 // /app/api/stripe/get-order/route.ts
-
-import { NextResponse } from "next/server";
 import { OrderService } from "@/services/orderService";
-import { Stripe } from "stripe";
 import { STRIPE_API_VERSION } from "@/utils/env";
+import { NextResponse } from "next/server";
+import { Stripe } from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: STRIPE_API_VERSION,
@@ -37,22 +36,20 @@ export async function GET(request: Request) {
     const order = await OrderService.findOrderByStripeData(sessionId);
 
     if (!order) {
-      // Payment successful but order not found - might still be processing
-      // Wait briefly and try one more time
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const retryOrder = await OrderService.findOrderByStripeData(sessionId);
-
-      if (!retryOrder) {
-        return NextResponse.json(
-          {
-            error: "Order not found",
-            message: "Payment successful, but order is still processing",
+      // Payment successful but order not found - still processing
+      const retryAfterSeconds = 2;
+      return NextResponse.json(
+        {
+          message: "Order is still processing",
+          retryAfter: retryAfterSeconds,
+        },
+        {
+          status: 202,
+          headers: {
+            "Retry-After": String(retryAfterSeconds),
           },
-          { status: 202 }
-        );
-      }
-
-      return NextResponse.json({ orderId: retryOrder.id });
+        }
+      );
     }
 
     return NextResponse.json({ orderId: order.id });
