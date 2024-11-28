@@ -87,21 +87,15 @@ export default function OrderPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const fetchOrder = async () => {
-      try {
-        const response = await fetch(`/api/orders/${params.id}`)
-        if (!response.ok) {
-          throw new Error('Order not found')
-        }
-        const data = await response.json()
-        console.log('Fetched order data:', data)
-        setOrder(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load order')
-      } finally {
-        setLoading(false)
+      const response = await fetch(`/api/orders/${params.id}`)
+      if (!response.ok) {
+        throw new Error('Order not found')
       }
+      const data = await response.json()
+      console.log('Fetched order data:', data)
+      setOrder(data)
     }
-
+    setLoading(false)
     if (params.id) {
       fetchOrder()
     }
