@@ -6,12 +6,20 @@ const PRINTFUL_API_URL = "https://api.printful.com";
 const PRINTFUL_TOKEN = process.env.PRINTFUL_TOKEN;
 
 async function fetchPrintfulOrder(orderId: string) {
-  const printfulId =
-    !orderId.startsWith("@") && orderId.length > 30 ? `@${orderId}` : orderId;
+  // For Stripe payment IDs, add @ prefix if not present and ensure # is included
+  let printfulId = orderId;
+  if (orderId.startsWith("pi_")) {
+    // If it's a Stripe payment ID, ensure it has the @ prefix
+    // printfulId = orderId.startsWith("@") ? orderId : `@${orderId}`;
+    // Add the # before the ID for external ID lookup
+    printfulId = `#${printfulId}`;
+  }
+
   console.log("Fetching Printful order with ID:", printfulId);
+  console.log("Full URL:", `${PRINTFUL_API_URL}/orders/${printfulId}`);
 
   try {
-    const response = await fetch(`${PRINTFUL_API_URL}/orders/#${printfulId}`, {
+    const response = await fetch(`${PRINTFUL_API_URL}/orders/${printfulId}`, {
       headers: {
         Authorization: `Bearer ${PRINTFUL_TOKEN}`,
       },
@@ -24,9 +32,7 @@ async function fetchPrintfulOrder(orderId: string) {
     }
 
     const data = await response.json();
-    console.log("FULL PRINTFUL RESPONSE:", JSON.stringify(data, null, 2));
-    console.log("PRINTFUL RESULT ONLY:", JSON.stringify(data.result, null, 2));
-    console.log("meow", `${PRINTFUL_API_URL}/orders/#${printfulId}`);
+    console.log("Printful API Response:", JSON.stringify(data, null, 2));
 
     if (!data.result) {
       console.log("No result in Printful response");
@@ -34,87 +40,46 @@ async function fetchPrintfulOrder(orderId: string) {
     }
 
     const result = data.result;
-    console.log(
-      "PRINTFUL RESULT ITEMS:",
-      JSON.stringify(result.items, null, 2)
-    );
-    console.log(
-      "PRINTFUL RESULT COSTS:",
-      JSON.stringify(result.costs, null, 2)
-    );
-    console.log(
-      "PRINTFUL RESULT SHIPMENTS:",
-      JSON.stringify(result.shipments, null, 2)
-    );
 
-    // Map the response according to the Printful API structure
     return {
-      id: result.id,
-      external_id: result.external_id,
-      status: result.status,
-      shipping: result.shipping,
-      shipping_service_name: result.shipping_service_name,
-      created: result.created,
-      updated: result.updated,
+      status: result[0].status,
+      created: result[0].created,
+      updated: result[0].updated,
+      shipping_service_name: result[0].shipping_service_name,
+      estimated_delivery: result[0].estimated_delivery || result[0].ship_date,
       recipient: {
-        name: result.recipient?.name || "",
-        company: result.recipient?.company || "",
-        address1: result.recipient?.address1 || "",
-        address2: result.recipient?.address2 || "",
-        city: result.recipient?.city || "",
-        state_code: result.recipient?.state_code || "",
-        state_name: result.recipient?.state_name || "",
-        country_code: result.recipient?.country_code || "",
-        country_name: result.recipient?.country_name || "",
-        zip: result.recipient?.zip || "",
-        phone: result.recipient?.phone || "",
-        email: result.recipient?.email || "",
+        name: result[0].recipient?.name || "",
+        address1: result[0].recipient?.address1 || "",
+        address2: result[0].recipient?.address2 || "",
+        city: result[0].recipient?.city || "",
+        state_name: result[0].recipient?.state_name || "",
+        country_name: result[0].recipient?.country_name || "",
+        zip: result[0].recipient?.zip || "",
       },
-      items: (result.items || []).map((item: any) => ({
-        id: item.id,
-        external_id: item.external_id,
-        variant_id: item.variant_id,
-        quantity: item.quantity,
-        price: item.price,
-        retail_price: item.retail_price,
+      items: (result[0].items || []).map((item: any) => ({
         name: item.name,
-        product: {
-          variant_id: item.product?.variant_id,
-          product_id: item.product?.product_id,
-          image: item.product?.image,
-          name: item.product?.name,
-        },
+        quantity: item.quantity,
+        status: item.status || "pending",
+        retail_price: item.retail_price,
       })),
-      costs: result.costs || {
-        currency: "USD",
+      costs: result[0].retail_costs || {
         subtotal: "0.00",
-        discount: "0.00",
         shipping: "0.00",
         tax: "0.00",
         total: "0.00",
       },
-      retail_costs: result.retail_costs || {
-        currency: "USD",
-        subtotal: "0.00",
-        discount: "0.00",
-        shipping: "0.00",
-        tax: "0.00",
-        total: "0.00",
-      },
-      shipments: (result.shipments || []).map((shipment: any) => ({
-        id: shipment.id,
+      shipments: (result[0].shipments || []).map((shipment: any) => ({
         carrier: shipment.carrier,
         service: shipment.service,
         tracking_number: shipment.tracking_number,
         tracking_url: shipment.tracking_url,
-        created: shipment.created,
         ship_date: shipment.ship_date,
-        shipped_at: shipment.shipped_at,
-        reshipment: shipment.reshipment,
-        items: shipment.items,
+        shipped_at: shipment.shipped_at
+          ? new Date(shipment.shipped_at * 1000).toISOString()
+          : null,
+        estimated_delivery: shipment.estimated_delivery_date,
+        status: shipment.status,
       })),
-      gift: result.gift || null,
-      packing_slip: result.packing_slip || null,
     };
   } catch (error) {
     console.error("Error fetching Printful order:", error);
@@ -150,21 +115,15 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    console.log("PRISMA ORDER:", JSON.stringify(order, null, 2));
+    console.log("Found Prisma order:", JSON.stringify(order, null, 2));
 
     let printfulDetails = null;
-    if (order.printfulId) {
-      console.log("Using Printful ID:", order.printfulId);
-      printfulDetails = await fetchPrintfulOrder(order.printfulId);
-    } else if (order.stripePaymentId) {
+    if (order.stripePaymentId) {
       console.log("Using Stripe Payment ID:", order.stripePaymentId);
       printfulDetails = await fetchPrintfulOrder(order.stripePaymentId);
     }
 
-    console.log(
-      "FINAL PRINTFUL DETAILS:",
-      JSON.stringify(printfulDetails, null, 2)
-    );
+    console.log("Final Printful details:", JSON.stringify(printfulDetails));
 
     return NextResponse.json({
       ...order,
