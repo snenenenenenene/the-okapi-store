@@ -1,4 +1,3 @@
-// app/api/stripe/webhook/route.ts
 import prisma from "@/lib/prisma";
 import { sendOrderConfirmationEmail } from "@/utils/emailService";
 import { createPrintfulOrder } from "@/utils/printful";
@@ -11,27 +10,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   try {
-    console.log("Webhook received");
+    console.log("=== Webhook Processing Started ===");
     const payload = await req.text();
     const signature = req.headers.get("stripe-signature");
 
     if (!signature) {
       console.error("No signature found");
-      return NextResponse.json(
-        { error: "No signature found" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No signature found" }, { status: 400 });
     }
 
     let event: Stripe.Event;
-
     try {
       event = stripe.webhooks.constructEvent(
         payload,
         signature,
         process.env.STRIPE_WEBHOOK_SECRET!
       );
-      console.log(`Event constructed successfully. Type: ${event.type}`);
+      console.log("Event type:", event.type);
     } catch (err: any) {
       console.error("Webhook signature verification failed:", err.message);
       return NextResponse.json(
@@ -41,30 +36,81 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "charge.succeeded") {
-      console.log("Processing charge.succeeded event");
+      console.log("\n=== Processing Charge Succeeded Event ===");
       const charge = event.data.object as Stripe.Charge;
+      
+      console.log("\nCharge Metadata:", {
+        raw: charge.metadata,
+        itemsType: typeof charge.metadata?.items,
+        itemsLength: charge.metadata?.items?.length
+      });
 
       // Get payment intent
       const paymentIntent = await stripe.paymentIntents.retrieve(
         charge.payment_intent as string
       );
+      
+      console.log("\nPayment Intent Metadata:", {
+        raw: paymentIntent.metadata,
+        itemsType: typeof paymentIntent.metadata?.items,
+        itemsLength: paymentIntent.metadata?.items?.length
+      });
 
       // Parse cart items
       let cartItems;
       try {
-        cartItems = charge.metadata?.items
-          ? JSON.parse(charge.metadata.items)
-          : [];
-        console.log("Cart items:", cartItems);
+        const itemsJson = charge.metadata?.items || paymentIntent.metadata?.items;
+        console.log("\nRaw items JSON:", itemsJson);
+        
+        if (!itemsJson) {
+          console.error("No items found in metadata");
+          throw new Error("No items found in metadata");
+        }
 
+        // Try parsing the JSON string
+        try {
+          console.log("\nAttempting first JSON parse...");
+          cartItems = JSON.parse(itemsJson);
+          console.log("First parse result:", cartItems);
+        } catch (parseError) {
+          console.error("First parse failed:", parseError);
+          
+          // If first parse fails, try cleaning the string
+          console.log("\nAttempting to clean and parse JSON...");
+          const cleanJson = itemsJson.replace(/\\"/g, '"').replace(/^"/, '').replace(/"$/, '');
+          console.log("Cleaned JSON string:", cleanJson);
+          
+          cartItems = JSON.parse(cleanJson);
+          console.log("Second parse result:", cartItems);
+        }
+
+        // Validate cart items structure
+        console.log("\nValidating cart items:", {
+          isArray: Array.isArray(cartItems),
+          length: cartItems?.length,
+          firstItem: cartItems?.[0]
+        });
+
+        if (!Array.isArray(cartItems) || cartItems.length === 0) {
+          throw new Error("Invalid cart items format or empty cart");
+        }
+
+        // Process cart items
         cartItems = cartItems.map((item: any) => ({
           ...item,
           id: String(item.id),
           variant_id: String(item.variant_id),
         }));
+        
+        console.log("\nProcessed cart items:", cartItems);
+
       } catch (error) {
-        console.error("Error parsing cart items:", error);
-        throw new Error("Invalid cart items format");
+        console.error("\n=== Cart Items Processing Error ===");
+        console.error("Error details:", error);
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        throw new Error("No items found in the cart or invalid cart format");
       }
 
       // Create or get user
@@ -125,7 +171,7 @@ export async function POST(req: Request) {
                   create: {
                     id: String(item.id),
                     name: item.name,
-                    description: item.name, // Using name as description or provide a default description
+                    description: item.name,
                     price: parseFloat(String(item.price)),
                     image: item.image,
                   },
@@ -164,7 +210,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Error processing webhook:", error);
+    console.error("\n=== Webhook Processing Error ===");
+    console.error("Error details:", error);
     return NextResponse.json(
       {
         error: "Failed to process webhook",

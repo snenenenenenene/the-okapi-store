@@ -13,16 +13,12 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     const { items } = await req.json();
 
-    console.log("Received create checkout session request:", items);
+    console.log("Creating checkout session with items:", JSON.stringify(items, null, 2));
 
-    // if (!items?.length) {
-    //   return NextResponse.json({ error: "No items in cart" }, { status: 400 });
-    // }
-
-    console.log(
-      "Creating checkout session with items:",
-      JSON.stringify(items, null, 2)
-    );
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
+    if (!baseUrl) {
+      throw new Error('NEXT_PUBLIC_BASE_URL is not configured');
+    }
 
     // Create line items for Stripe
     const lineItems = items.map((item: any) => ({
@@ -72,8 +68,8 @@ export async function POST(req: Request) {
         },
       ],
       line_items: lineItems,
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/cancel`,
+      success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/checkout/cancel`,
       metadata: {
         cartItems: JSON.stringify(items),
         userId: session?.user?.id || "guest",
@@ -87,7 +83,11 @@ export async function POST(req: Request) {
       customer_email: session?.user?.email,
     });
 
-    console.log("Checkout session created:", checkoutSession.id);
+    console.log("Checkout session created:", {
+      id: checkoutSession.id,
+      successUrl: checkoutSession.success_url,
+      cancelUrl: checkoutSession.cancel_url
+    });
 
     return NextResponse.json({
       sessionId: checkoutSession.id,
