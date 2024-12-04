@@ -1,67 +1,72 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
-
-const PRINTFUL_API_URL = "https://api.printful.com";
-const PRINTFUL_TOKEN = process.env.PRINTFUL_TOKEN;
+import { PRINTFUL_API_URL } from "@/utils/env";
+import { type PrintfulProductResponse } from "@/types/printful";
 
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const response = await fetch(
-      `${PRINTFUL_API_URL}/store/products/${params.id}`,
+    // First get all products to find the one with matching external_id
+    const allProductsResponse = await fetch(`${PRINTFUL_API_URL}/store/products`, {
+      headers: {
+        Authorization: `Bearer ${process.env.PRINTFUL_TOKEN}`,
+      },
+    });
+
+    if (!allProductsResponse.ok) {
+      throw new Error(`HTTP error! status: ${allProductsResponse.status}`);
+    }
+
+    const allProducts = await allProductsResponse.json();
+    const product = allProducts.result.find((p: any) => p.external_id === params.id);
+
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Now get the detailed product info
+    const detailResponse = await fetch(
+      `${PRINTFUL_API_URL}/store/products/${product.id}`,
       {
         headers: {
-          Authorization: `Bearer ${PRINTFUL_TOKEN}`,
+          Authorization: `Bearer ${process.env.PRINTFUL_TOKEN}`,
         },
       }
     );
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch product from Printful");
+    if (!detailResponse.ok) {
+      throw new Error(`HTTP error! status: ${detailResponse.status}`);
     }
 
-    const json = await response.json();
-    const product_data = json.result;
+    const detailData: PrintfulProductResponse = await detailResponse.json();
+    const { sync_product, sync_variants } = detailData.result;
 
-    console.log("Fetched product data from Printful:", product_data);
-
-    const product = {
-      id: product_data.sync_product.id,
-      name: product_data.sync_product.name,
-      description:
-        product_data.sync_product.description ||
-        "A unique piece from The Okapi Store",
-      thumbnail_url: product_data.sync_product.thumbnail_url,
-      image: product_data.sync_product.thumbnail_url,
-      variants: product_data.sync_variants.map((variant: any) => ({
-        id: variant.variant_id,
-        sync_variant_id: variant.sync_product_id,
-        external_id: variant.external_id,
+    return NextResponse.json({
+      id: sync_product.external_id,
+      name: sync_product.name,
+      description: sync_product.description || "A unique piece from The Okapi Store",
+      images: sync_variants.map(variant => variant.product.image).filter(Boolean),
+      price: parseFloat(sync_variants[0]?.retail_price || "0"),
+      currency: sync_variants[0]?.currency || "EUR",
+      variants: sync_variants.map(variant => ({
+        id: variant.id,
         name: variant.name,
-        price: variant.retail_price,
+        price: parseFloat(variant.retail_price),
         size: variant.size,
-        currency: variant.currency,
-        availability_status: variant.availability_status,
-        thumbnailUrl:
-          variant.files.find((file: any) => file.type === "preview")
-            ?.thumbnail_url || null,
-        previewUrl:
-          variant.files.find((file: any) => file.type === "preview")
-            ?.preview_url || null,
-        files: variant.files,
         color: variant.color,
+        sku: variant.sku,
+        inStock: variant.availability_status === "active"
       })),
-    };
+      inStock: sync_variants.some(v => v.availability_status === "active"),
+      thumbnail: sync_product.thumbnail_url,
+      previewImage: sync_variants[0]?.files.find(f => f.type === "preview")?.preview_url || sync_product.thumbnail_url
+    });
 
-    console.log("Processed product data:", product);
-
-    return NextResponse.json(product);
   } catch (error) {
-    console.error("Error fetching product from Printful:", error);
+    console.error("Error fetching product:", error);
     return NextResponse.json(
-      { message: "Failed to fetch product" },
+      { error: "Failed to fetch product" },
       { status: 500 }
     );
   }

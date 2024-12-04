@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronRight, ChevronLeft, Loader2, MapPin } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, Loader2, MapPin, CreditCard } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import { SUPPORTED_COUNTRIES, ShippingAddress, CheckoutItem, CheckoutState } from "@/types/checkout";
 import { CheckoutService } from "@/lib/checkout";
@@ -415,14 +415,24 @@ export function OrderReview() {
 export function PaymentStep() {
 	const { state, setError, setProcessing, setStripeSessionId } = useCheckout();
 	const { cart } = useCartStore();
+	const [isAnimating, setIsAnimating] = useState(false);
 
-	const handleBack = () => setStep("review");
+	const handleBack = () => {
+		setIsAnimating(true);
+		setTimeout(() => {
+			setStep("review");
+			setIsAnimating(false);
+		}, 300);
+	};
 
 	const handlePayment = async () => {
 		setProcessing(true);
 		setError(undefined);
 
 		try {
+			// Start loading animation
+			setIsAnimating(true);
+
 			const response = await fetch('/api/stripe/create-checkout-session', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -437,29 +447,44 @@ export function PaymentStep() {
 				throw new Error(error.message || 'Failed to create checkout session');
 			}
 
-			const { sessionId } = await response.json();
-			setStripeSessionId(sessionId);
+			const data = await response.json();
+			if (!data.sessionId) {
+				throw new Error('Invalid response: missing session ID');
+			}
+
+			setStripeSessionId(data.sessionId);
 
 			const stripe = await stripePromise;
 			if (!stripe) {
 				throw new Error('Failed to load payment system');
 			}
 
-			const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+			// Smooth transition to Stripe
+			await new Promise(resolve => setTimeout(resolve, 300));
+			const { error: stripeError } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+			
 			if (stripeError) {
 				throw stripeError;
 			}
 		} catch (error) {
 			setError(error instanceof Error ? error.message : 'Payment processing failed');
+			// Shake animation on error
+			setIsAnimating(false);
+			const button = document.querySelector('.payment-button');
+			button?.classList.add('shake');
+			setTimeout(() => button?.classList.remove('shake'), 500);
 		} finally {
 			setProcessing(false);
 		}
 	};
 
 	return (
-		<div className="space-y-8">
-			<div className="bg-base-200 p-6 rounded-lg">
-				<h3 className="font-bold mb-4">Payment Details</h3>
+		<div className={`space-y-8 transition-all duration-300 ${isAnimating ? 'opacity-50' : 'opacity-100'}`}>
+			<div className="bg-base-200 p-6 rounded-lg transform transition-all duration-300 hover:scale-[1.01]">
+				<h3 className="font-bold mb-4 flex items-center gap-2">
+					<CreditCard className="w-5 h-5" />
+					Payment Details
+				</h3>
 				<p className="text-base-content/70">
 					You will be redirected to our secure payment provider to complete your purchase.
 				</p>
@@ -467,15 +492,23 @@ export function PaymentStep() {
 				<div className="mt-4">
 					<div className="flex justify-between items-center font-bold">
 						<span>Total to Pay:</span>
-						<span className="text-2xl text-primary">
+						<span className="text-2xl text-primary relative group">
 							{formatEuroPrice(cart.reduce((sum, item) => sum + item.price * item.quantity, 0))}
+							<span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" />
 						</span>
-					</div><div className="mt-4 text-sm text-base-content/70">
+					</div>
+					<div className="mt-4 text-sm text-base-content/70">
 						<p>By proceeding with the payment, you agree to our:</p>
-						<ul className="list-disc list-inside mt-2">
-							<li>Terms of Service</li>
-							<li>Privacy Policy</li>
-							<li>Return Policy</li>
+						<ul className="list-disc list-inside mt-2 space-y-1">
+							<li className="hover:text-primary transition-colors duration-200 cursor-pointer">
+								Terms of Service
+							</li>
+							<li className="hover:text-primary transition-colors duration-200 cursor-pointer">
+								Privacy Policy
+							</li>
+							<li className="hover:text-primary transition-colors duration-200 cursor-pointer">
+								Return Policy
+							</li>
 						</ul>
 					</div>
 				</div>
@@ -485,17 +518,19 @@ export function PaymentStep() {
 				<button
 					type="button"
 					onClick={handleBack}
-					className="btn btn-outline"
+					className="btn btn-outline group relative overflow-hidden"
+					disabled={state.isProcessing || isAnimating}
 				>
-					<ChevronLeft className="w-4 h-4 mr-2" />
-					Back to Review
+					<span className="absolute inset-0 bg-primary transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
+					<ChevronLeft className="w-4 h-4 mr-2 relative z-10" />
+					<span className="relative z-10">Back to Review</span>
 				</button>
 
 				<button
 					type="button"
 					onClick={handlePayment}
-					className="btn btn-primary"
-					disabled={state.isProcessing}
+					className="btn btn-primary payment-button group relative overflow-hidden"
+					disabled={state.isProcessing || isAnimating}
 				>
 					{state.isProcessing ? (
 						<>
@@ -504,12 +539,27 @@ export function PaymentStep() {
 						</>
 					) : (
 						<>
-							Proceed to Payment
-							<ChevronRight className="w-4 h-4 ml-2" />
+							<span className="flex items-center gap-2 relative z-10">
+								Proceed to Payment
+								<ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+							</span>
+							<span className="absolute inset-0 bg-white/10 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
 						</>
 					)}
 				</button>
 			</div>
+
+			{/* Add shake animation */}
+			<style jsx global>{`
+				@keyframes shake {
+					0%, 100% { transform: translateX(0); }
+					25% { transform: translateX(-4px); }
+					75% { transform: translateX(4px); }
+				}
+				.shake {
+					animation: shake 0.3s ease-in-out;
+				}
+			`}</style>
 		</div>
 	);
 }

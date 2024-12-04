@@ -3,15 +3,25 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  image: string;
+  images: string[];
   price: number;
+  inStock?: boolean;
+  rating?: number;
+  reviewCount?: number;
   variants: Variant[];
+  tags?: string[];
+  category?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-interface Variant {
+export interface Variant {
   id: number;
   name: string;
   price: number;
   size: string;
   currency: string;
+  inStock?: boolean;
+  sku?: string;
+  color?: string;
 }

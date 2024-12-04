@@ -1,197 +1,231 @@
 'use client';
 
 import { useCartStore } from '@/store/cartStore';
-import { useElements, useStripe } from '@stripe/react-stripe-js';
+import {
+  AddressElement,
+  LinkAuthenticationElement,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from '@stripe/react-stripe-js';
+import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useRef, useState } from 'react';
-import usePaymentIntentHandler from './usePaymentIntentHandler';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface ShippingRate {
-	id: string;
-	name: string;
-	rate: number;
-	min_delivery_days: number;
-	max_delivery_days: number;
+interface CheckoutFormProps {
+  activeStep: string;
+  setActiveStep: (step: string) => void;
 }
 
-function CheckoutForm() {
-	const stripe = useStripe();
-	const elements = useElements();
-	const [email, setEmail] = useState('');
-	const [message, setMessage] = useState<string | null>(null);
-	const [isLoading, setIsLoading] = useState(false);
-	const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
-	const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
-	const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
-	const [address, setAddress] = useState<any>(null);
-	const router = useRouter();
-	const { cart, clearCart, getTotalPrice } = useCartStore();
-	const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
-	const updatePaymentIntent = usePaymentIntentHandler();
-	const submitAttempted = useRef(false);
+export default function CheckoutForm({ activeStep, setActiveStep }: CheckoutFormProps) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [address, setAddress] = useState<any>(null);
+  const { cart, getTotalPrice, clearCart } = useCartStore();
+  const router = useRouter();
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
-	const calculateShipping = useCallback(async (shippingAddress: any) => {
-		if (!shippingAddress?.country) return;
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<{
+    contact?: string;
+    shipping?: string;
+    payment?: string;
+  }>({});
 
-		setIsCalculatingShipping(true);
-		setShippingRates([]);
-		setSelectedRate(null);
+  const createPaymentIntent = async () => {
+    try {
+      const formattedItems = cart.map(item => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+      }));
 
-		try {
-			// Validate that all cart items have variant_id
-			if (cart.some(item => !item.variant_id)) {
-				throw new Error('Some items in cart are missing variant_id');
-			}
+      const response = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: formattedItems,
+          currency: 'eur',
+        }),
+      });
 
-			const formattedItems = cart.map(item => ({
-				variant_id: item.variant_id,
-				quantity: item.quantity,
-				price: item.price
-			}));
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create payment intent');
+      }
+      return data.clientSecret;
+    } catch (error) {
+      console.error('Error creating payment intent:', error);
+      throw error;
+    }
+  };
 
-			const response = await fetch('/api/printful/shipping-rates', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					address: {
-						address1: shippingAddress.line1,
-						address2: shippingAddress.line2,
-						city: shippingAddress.city,
-						state: shippingAddress.state,
-						country: shippingAddress.country,
-						zip: shippingAddress.postal_code,
-					},
-					items: formattedItems
-				}),
-			});
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setValidationErrors({});
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to calculate shipping');
-			}
+    if (!stripe || !elements) {
+      console.error('Stripe.js has not loaded');
+      return;
+    }
 
-			const rates = await response.json();
-			console.log('Received shipping rates:', rates);
-			setShippingRates(rates);
+    setIsLoading(true);
 
-			if (rates.length > 0) {
-				const cheapestRate = rates.reduce((prev: ShippingRate, curr: ShippingRate) =>
-					prev.rate < curr.rate ? prev : curr
-				);
-				setSelectedRate(cheapestRate);
+    try {
+      if (activeStep === 'contact') {
+        if (!email) {
+          setValidationErrors({ contact: 'Email is required' });
+          return;
+        }
+        setActiveStep('shipping');
+      } else if (activeStep === 'shipping') {
+        if (!address) {
+          setValidationErrors({ shipping: 'Shipping address is required' });
+          return;
+        }
+        setActiveStep('payment');
+        // Create payment intent when moving to payment step
+        const secret = await createPaymentIntent();
+        setClientSecret(secret);
+      } else if (activeStep === 'payment') {
+        if (!clientSecret) {
+          setValidationErrors({ payment: 'Payment setup failed' });
+          return;
+        }
 
-				const result = await updatePaymentIntent(cart, cheapestRate, paymentIntentId);
-				if (result?.paymentIntentId) {
-					setPaymentIntentId(result.paymentIntentId);
-				}
-			}
-		} catch (error) {
-			console.error('Shipping calculation error:', error);
-			setMessage(error instanceof Error ? error.message : 'Failed to calculate shipping rates');
-		} finally {
-			setIsCalculatingShipping(false);
-		}
-	}, [cart, paymentIntentId, updatePaymentIntent]);
+        const { error } = await stripe.confirmPayment({
+          elements,
+          clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/order/confirmation`,
+          },
+        });
 
-	const handleAddressChange = useCallback((event: any) => {
-		const newAddress = event.value;
-		setAddress(newAddress);
+        if (error) {
+          setValidationErrors({ payment: error.message || 'Payment failed' });
+        }
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      setValidationErrors(prev => ({ ...prev, payment: 'An unexpected error occurred' }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-		if (newAddress?.address?.country &&
-			newAddress?.address?.postal_code &&
-			newAddress?.address?.city) {
-			calculateShipping(newAddress.address);
-		}
-	}, [calculateShipping]);
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      <AnimatePresence mode="wait">
+        {activeStep === 'contact' && (
+          <motion.div
+            key="contact"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            <h2 className="text-xl font-medium text-stone-200">Contact Information</h2>
+            <div className="rounded-lg border border-stone-800 bg-stone-900/50 p-4">
+              <LinkAuthenticationElement
+                onChange={(event) => {
+                  if (event.complete) {
+                    setEmail(event.value.email);
+                  }
+                }}
+                options={{
+                  defaultValues: {
+                    email: email,
+                  },
+                }}
+              />
+            </div>
+            {validationErrors.contact && (
+              <div className="flex items-center gap-2 text-sm text-red-500">
+                <AlertCircle className="h-4 w-4" />
+                {validationErrors.contact}
+              </div>
+            )}
+          </motion.div>
+        )}
 
-	const handleShippingRateChange = async (rate: ShippingRate) => {
-		if (rate.id === selectedRate?.id) return;
+        {activeStep === 'shipping' && (
+          <motion.div
+            key="shipping"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            <h2 className="text-xl font-medium text-stone-200">Shipping Address</h2>
+            <div className="rounded-lg border border-stone-800 bg-stone-900/50 p-4">
+              <AddressElement
+                onChange={(event) => {
+                  if (event.complete) {
+                    setAddress(event.value);
+                  }
+                }}
+                options={{
+                  mode: 'shipping',
+                  allowedCountries: ['BE', 'NL', 'LU', 'DE', 'FR'],
+                }}
+              />
+            </div>
+            {validationErrors.shipping && (
+              <div className="flex items-center gap-2 text-sm text-red-500">
+                <AlertCircle className="h-4 w-4" />
+                {validationErrors.shipping}
+              </div>
+            )}
+          </motion.div>
+        )}
 
-		setSelectedRate(rate);
-		console.log('Updating payment intent with new shipping rate:', rate);
+        {activeStep === 'payment' && (
+          <motion.div
+            key="payment"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            <h2 className="text-xl font-medium text-stone-200">Payment</h2>
+            <div className="rounded-lg border border-stone-800 bg-stone-900/50 p-4">
+              <PaymentElement />
+            </div>
+            {validationErrors.payment && (
+              <div className="flex items-center gap-2 text-sm text-red-500">
+                <AlertCircle className="h-4 w-4" />
+                {validationErrors.payment}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-		const result = await updatePaymentIntent(cart, rate, paymentIntentId);
-		if (result?.paymentIntentId) {
-			setPaymentIntentId(result.paymentIntentId);
-		}
-	};
-
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-
-		if (submitAttempted.current) {
-			console.log('Preventing duplicate submission');
-			return;
-		}
-
-		if (!stripe || !elements) {
-			setMessage('Payment system not initialized. Please try again.');
-			return;
-		}
-
-		if (!email || !address?.phone || !selectedRate) {
-			setMessage('Please fill in all required fields');
-			return;
-		}
-
-		submitAttempted.current = true;
-		setIsLoading(true);
-		setMessage(null);
-
-		try {
-			// Validate cart items again before submission
-			if (cart.some(item => !item.variant_id)) {
-				throw new Error('Some items in cart are missing variant_id');
-			}
-
-			const { error: validationError } = await elements.submit();
-			if (validationError) {
-				throw validationError;
-			}
-
-			const finalPaymentIntent = await updatePaymentIntent(cart, selectedRate, paymentIntentId);
-			if (!finalPaymentIntent || !finalPaymentIntent.clientSecret) {
-				throw new Error('Failed to prepare payment. Please try again.');
-			}
-
-			const { error: confirmError } = await stripe.confirmPayment({
-				elements,
-				clientSecret: finalPaymentIntent.clientSecret,
-				confirmParams: {
-					return_url: `${window.location.origin}/checkout/success`,
-					payment_method_data: {
-						billing_details: {
-							name: address.name,
-							email: email,
-							phone: address.phone,
-						},
-					},
-				},
-			});
-
-			if (confirmError) {
-				throw confirmError;
-			}
-
-		} catch (error) {
-			console.error('Payment error:', error);
-			setMessage(error instanceof Error ? error.message : 'An error occurred with the payment');
-			submitAttempted.current = false;
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
-	const subtotal = getTotalPrice();
-	const shippingCost = selectedRate?.rate || 0;
-	const total = (Number(subtotal) + Number(shippingCost)).toFixed(2);
-
-	// Return JSX (existing render code)
-	return (
-		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			{/* Existing JSX content */}
-		</div>
-	);
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="inline-flex items-center gap-2 rounded-lg bg-stone-200 px-6 py-2 text-sm font-medium text-vintage-black transition-colors hover:bg-stone-300 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              {activeStep === 'payment' ? 'Pay Now' : 'Continue'}
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
 }
-
-export default CheckoutForm;

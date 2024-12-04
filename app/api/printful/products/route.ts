@@ -1,10 +1,32 @@
 import { NextResponse } from "next/server";
+import { PRINTFUL_API_URL } from "@/utils/env";
+import { productCache } from "@/lib/cache";
+import { printfulRateLimiter } from "@/lib/rate-limiter";
+import { type PrintfulProductResponse, type PrintfulProduct } from "@/types/printful";
 
-const PRINTFUL_API_URL = "https://api.printful.com";
 const PRINTFUL_TOKEN = process.env.PRINTFUL_TOKEN;
 
 export async function GET() {
   try {
+    // Check cache first
+    const cachedProducts = productCache.get("products");
+    if (cachedProducts) {
+      return NextResponse.json(cachedProducts);
+    }
+
+    // Check rate limit
+    const canProceed = await printfulRateLimiter.checkLimit();
+    if (!canProceed) {
+      const retryAfter = printfulRateLimiter.getNextAllowedTime();
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { 
+          status: 429,
+          headers: { "Retry-After": Math.ceil(retryAfter / 1000).toString() }
+        }
+      );
+    }
+
     const response = await fetch(`${PRINTFUL_API_URL}/store/products`, {
       headers: {
         Authorization: `Bearer ${PRINTFUL_TOKEN}`,
@@ -12,14 +34,15 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch products from Printful");
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
+    const products = data.result;
 
     // Fetch detailed information for each product
     const detailedProducts = await Promise.all(
-      data.result.map(async (item: any) => {
+      products.map(async (item: any) => {
         const detailResponse = await fetch(
           `${PRINTFUL_API_URL}/store/products/${item.id}`,
           {
@@ -30,43 +53,46 @@ export async function GET() {
         );
 
         if (!detailResponse.ok) {
-          console.error(`Failed to fetch details for product ${item.id}`);
-          return null;
+          throw new Error(`HTTP error! status: ${detailResponse.status}`);
         }
 
-        const detailData = await detailResponse.json();
-        const variant = detailData.result.sync_variants[0]; // Assuming the first variant
+        const detailData: PrintfulProductResponse = await detailResponse.json();
+        const { sync_product, sync_variants } = detailData.result;
 
-        return {
-          id: item.id,
-          variant_id: variant.id, // Add variant_id
-          name: item.name,
-          description: item.description || "No description available",
-          price: parseFloat(variant.retail_price),
-          currency: variant.currency,
-          image: item.thumbnail_url,
-          variants: detailData.result.sync_variants.map((v: any) => ({
-            id: v.id,
-            name: v.name,
-            price: parseFloat(v.retail_price),
-            size: v.size,
-            inStock: v.availability_status === "available",
+        // Transform the Printful data into our product format
+        const transformedProduct: PrintfulProduct = {
+          id: sync_product.external_id,
+          name: sync_product.name,
+          description: "", // Add description if available
+          images: sync_variants.map(variant => variant.product.image).filter(Boolean),
+          price: parseFloat(sync_variants[0]?.retail_price || "0"),
+          currency: sync_variants[0]?.currency || "EUR",
+          variants: sync_variants.map(variant => ({
+            id: variant.id,
+            name: variant.name,
+            price: parseFloat(variant.retail_price),
+            size: variant.size,
+            color: variant.color,
+            sku: variant.sku,
+            inStock: variant.availability_status === "active"
           })),
-          category: item.type_name || "No category available",
-          inStock: variant.availability_status === "available",
+          inStock: sync_variants.some(v => v.availability_status === "active"),
+          thumbnail: sync_product.thumbnail_url,
+          previewImage: sync_variants[0]?.files.find(f => f.type === "preview")?.preview_url || sync_product.thumbnail_url
         };
+
+        return transformedProduct;
       })
     );
 
-    // Filter out any null results (failed fetches)
-    const products = detailedProducts.filter((product) => product !== null);
-    console.log("Processed products:", products);
-
-    return NextResponse.json(products);
+    // Cache the successful response
+    productCache.set("products", detailedProducts);
+    
+    return NextResponse.json(detailedProducts);
   } catch (error) {
-    console.error("Error fetching products from Printful:", error);
+    console.error("Failed to fetch products:", error);
     return NextResponse.json(
-      { message: "Failed to fetch products" },
+      { error: "Failed to fetch products" },
       { status: 500 }
     );
   }

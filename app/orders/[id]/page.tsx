@@ -1,156 +1,83 @@
-'use client'
+'use client';
 
-import { motion } from 'framer-motion'
-import { CheckCircle, Clock, Package, Share2, Truck } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { formatEuroPrice } from '@/utils/formatters';
+import { motion } from 'framer-motion';
+import { Clock, Loader2, PackageCheck, Share2, Truck } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-interface OrderItem {
-  id: string
-  quantity: number
-  price: number
-  product: {
-    id: string
-    name: string
-    image: string
-  }
-}
+const StatusIndicator = ({ status }: { status: string }) => {
+  const getStatusInfo = () => {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return { icon: Clock, label: 'Processing', color: 'text-warning bg-warning/10' };
+      case 'pending':
+        return { icon: PackageCheck, label: 'Pending', color: 'text-info bg-info/10' };
+      case 'fulfilled':
+        return { icon: Truck, label: 'Shipped', color: 'text-success bg-success/10' };
+      default:
+        return { icon: Clock, label: status, color: 'text-neutral bg-neutral/10' };
+    }
+  };
 
-interface PrintfulShipment {
-  carrier: string
-  service: string
-  tracking_number: string
-  tracking_url: string
-  ship_date: string
-  shipped_at: string | null
-  estimated_delivery: string
-  status: string
-}
-
-interface PrintfulDetails {
-  status: string
-  created: string
-  updated: string
-  shipping_service: string
-  estimated_delivery: string
-  recipient: {
-    name: string
-    address1: string
-    address2?: string
-    city: string
-    state: string
-    country: string
-    zip: string
-  }
-  items: Array<{
-    name: string
-    quantity: number
-    status: string
-    retail_price: string
-  }>
-  costs: {
-    subtotal: string
-    shipping: string
-    tax: string
-    total: string
-  }
-  shipments: PrintfulShipment[]
-}
-
-interface Order {
-  id: string
-  status: string
-  total: number
-  createdAt: string
-  trackingNumber: string | null
-  trackingUrl: string | null
-  printfulStatus: string | null
-  stripePaymentId: string | null
-  printfulId: string | null
-  orderItems: OrderItem[]
-  printfulDetails?: PrintfulDetails
-}
-
-const statusMap = {
-  pending: { icon: Clock, label: 'Pending', color: 'text-warning' },
-  processing: { icon: Package, label: 'Processing', color: 'text-info' },
-  shipped: { icon: Truck, label: 'Shipped', color: 'text-primary' },
-  delivered: { icon: CheckCircle, label: 'Delivered', color: 'text-success' }
-}
+  const { icon: Icon, label, color } = getStatusInfo();
+  return (
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${color}`}>
+      <Icon className="w-4 h-4" />
+      <span className="text-sm font-medium capitalize">{label}</span>
+    </div>
+  );
+};
 
 export default function OrderPage({ params }: { params: { id: string } }) {
-  const [order, setOrder] = useState<Order | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [shareClicked, setShareClicked] = useState(false)
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
-      const response = await fetch(`/api/orders/${params.id}`)
-      if (!response.ok) {
-        throw new Error('Order not found')
+      try {
+        const response = await fetch(`/api/orders/${params.id}`);
+        const data = await response.json();
+        setOrder(data);
+      } catch (err) {
+        setError('Failed to load order');
+      } finally {
+        setLoading(false);
       }
-      const data = await response.json()
-      console.log('Fetched order data:', data)
-      setOrder(data)
-    }
-    setLoading(false)
-    if (params.id) {
-      fetchOrder()
-    }
-  }, [params.id])
+    };
 
-  const handleShare = async () => {
-    const orderUrl = `${window.location.origin}/orders/${params.id}`
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Order #${params.id}`,
-          text: 'Check out my order from The Okapi Store',
-          url: orderUrl
-        })
-      } catch (err) {
-        console.error('Error sharing:', err)
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(orderUrl)
-        setShareClicked(true)
-        setTimeout(() => setShareClicked(false), 2000)
-      } catch (err) {
-        console.error('Error copying to clipboard:', err)
-      }
-    }
-  }
+    fetchOrder();
+  }, [params.id]);
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
-  if (error) {
+  if (error || !order) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-serif text-error mb-4">{error}</h1>
-        <Link href="/" className="btn btn-primary">Return Home</Link>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-serif text-error mb-4">{error || 'Order not found'}</h1>
+          <Link href="/orders" className="btn btn-primary">
+            View All Orders
+          </Link>
+        </div>
       </div>
-    )
+    );
   }
-
-  if (!order) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-serif text-neutral mb-4">Order not found</h1>
-        <Link href="/" className="btn btn-primary">Return Home</Link>
-      </div>
-    )
-  }
-
-  const StatusIcon = statusMap[order.status as keyof typeof statusMap]?.icon || Clock
 
   return (
     <div className="min-h-screen bg-base-100 py-12">
@@ -158,132 +85,152 @@ export default function OrderPage({ params }: { params: { id: string } }) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-base-100 rounded-lg overflow-hidden"
+          className="space-y-8"
         >
-          <div className="bg-warning/10 p-4 text-warning text-sm">
-            Note: This order link can be shared, but please be cautious about sharing order details.
-          </div>
-
-          <div className="p-6 border-b border-base-200">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-serif text-neutral mb-2">Order #{order.id}</h1>
-                <p className="text-neutral/70">
-                  Placed on {new Date(order.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-2 ${statusMap[order.status as keyof typeof statusMap]?.color || 'text-neutral'}`}>
-                  <StatusIcon className="h-5 w-5" />
-                  <span className="font-medium">
-                    {statusMap[order.status as keyof typeof statusMap]?.label || order.status}
-                  </span>
-                </div>
-                <button
-                  onClick={handleShare}
-                  className="btn btn-ghost btn-sm"
-                >
-                  <Share2 className="h-5 w-5" />
-                  {shareClicked && <span className="ml-2">Copied!</span>}
-                </button>
-              </div>
+          {/* Order Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+            <div>
+              <h1 className="text-2xl font-serif mb-2">Order #{order.id}</h1>
+              <p className="text-neutral/70">
+                Placed on {new Date(order.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <StatusIndicator status={order.printfulDetails?.status || order.status} />
+              <button
+                onClick={handleShare}
+                className="btn btn-ghost btn-sm"
+                aria-label="Share order"
+              >
+                <Share2 className="w-4 h-4" />
+                {copied && <span className="ml-2">Copied!</span>}
+              </button>
             </div>
           </div>
 
-          {order.printfulDetails && (
-            <div className="bg-primary/5 p-6 m-6 rounded-lg">
-              <h3 className="font-serif text-lg mb-4">Shipping Status</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span>Status:</span>
-                  <span>{order.printfulDetails.status}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Shipping Method:</span>
-                  <span>{order.printfulDetails.shipping_service}</span>
-                </div>
-                {order.printfulDetails.estimated_delivery && (
-                  <div className="flex justify-between">
-                    <span>Estimated Delivery:</span>
-                    <span>{new Date(order.printfulDetails.estimated_delivery).toLocaleDateString()}</span>
+          {/* Order Details Grid */}
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Left Column - Items and Status */}
+            <div className="space-y-6">
+              <div className="bg-base-100 rounded-lg border border-base-200 overflow-hidden">
+                <div className="p-6">
+                  <h2 className="font-serif text-lg mb-4">Order Items</h2>
+                  <div className="space-y-4">
+                    {order.orderItems.map((item: any) => (
+                      <div key={item.id} className="flex gap-4">
+                        <div className="relative w-20 h-20">
+                          <Image
+                            src={item.product.image}
+                            alt={item.product.name}
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-medium">{item.product.name}</h3>
+                          <p className="text-sm text-neutral/70">
+                            Quantity: {item.quantity}
+                          </p>
+                          <p className="font-medium">
+                            {formatEuroPrice(item.price * item.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+
+                <div className="border-t border-base-200 p-6 bg-base-50">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>{formatEuroPrice(order.printfulDetails?.costs?.subtotal || order.total)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Shipping</span>
+                      <span>{formatEuroPrice(order.printfulDetails?.costs?.shipping || 0)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium text-lg pt-2 border-t">
+                      <span>Total</span>
+                      <span>{formatEuroPrice(order.total)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {order.printfulDetails.shipments.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-base-200">
-                  <h4 className="font-medium mb-3">Tracking Information</h4>
-                  {order.printfulDetails.shipments.map((shipment, index) => (
-                    <div key={index} className="bg-base-100 p-4 rounded-lg mb-2">
-                      <div className="flex justify-between mb-2">
-                        <span>{shipment.carrier} - {shipment.service}</span>
-                        <span className="badge badge-primary">{shipment.status}</span>
-                      </div>
-                      {shipment.tracking_number && (
-                        <div className="text-sm">
-                          <p className="mb-2">Tracking Number: {shipment.tracking_number}</p>
-                          {shipment.tracking_url && (
-                            <Link
-                              href={shipment.tracking_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-sm btn-outline"
-                            >
-                              Track Package
-                            </Link>
-                          )}
-                        </div>
-                      )}
+              {/* Shipping Progress */}
+              <div className="bg-primary/5 p-6 rounded-lg">
+                <h2 className="font-serif text-lg mb-4">Order Status</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <PackageCheck className="w-4 h-4 text-primary" />
                     </div>
-                  ))}
+                    <div>
+                      <p className="font-medium">Order Confirmed</p>
+                      <p className="text-sm text-neutral/70">
+                        {new Date(order.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {order.printfulDetails?.status === 'draft' && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center">
+                        <Clock className="w-4 h-4 text-warning" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Processing Order</p>
+                        <p className="text-sm text-neutral/70">
+                          Your order is being prepared for production
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Customer and Shipping Info */}
+            <div className="space-y-6">
+              {/* Customer Information */}
+              <div className="bg-base-100 rounded-lg border border-base-200 p-6">
+                <h2 className="font-serif text-lg mb-4">Customer Information</h2>
+                <div className="space-y-2">
+                  <p><span className="font-medium">Name:</span> {order.user.name}</p>
+                  <p><span className="font-medium">Email:</span> {order.user.email}</p>
+                </div>
+              </div>
+
+              {/* Shipping Information */}
+              {order.printfulDetails?.recipient && (
+                <div className="bg-base-100 rounded-lg border border-base-200 p-6">
+                  <h2 className="font-serif text-lg mb-4">Shipping Information</h2>
+                  <div className="space-y-2">
+                    <p>{order.printfulDetails.recipient.name}</p>
+                    <p>{order.printfulDetails.recipient.address1}</p>
+                    {order.printfulDetails.recipient.address2 && (
+                      <p>{order.printfulDetails.recipient.address2}</p>
+                    )}
+                    <p>
+                      {order.printfulDetails.recipient.city}, {order.printfulDetails.recipient.zip}
+                    </p>
+                    <p>{order.printfulDetails.recipient.country_name}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Shipping Method */}
+              {order.printfulDetails?.shipping_service_name && (
+                <div className="bg-base-100 rounded-lg border border-base-200 p-6">
+                  <h2 className="font-serif text-lg mb-4">Shipping Method</h2>
+                  <p>{order.printfulDetails.shipping_service_name}</p>
                 </div>
               )}
             </div>
-          )}
-
-          <div className="p-6">
-            {order.orderItems.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 border-b border-base-200 pb-4 mb-4">
-                <div className="relative h-20 w-20">
-                  <Image
-                    src={item.product.image}
-                    alt={item.product.name}
-                    fill
-                    className="object-cover rounded-lg"
-                  />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">{item.product.name}</h3>
-                  <p className="text-neutral/70">Quantity: {item.quantity}</p>
-                </div>
-                <p className="font-medium">
-                  €{(item.price * item.quantity).toFixed(2)}
-                </p>
-              </div>
-            ))}
-
-            <div className="flex justify-between items-center pt-4">
-              <span className="font-serif text-lg">Total</span>
-              <span className="font-serif text-lg">€{order.total.toFixed(2)}</span>
-            </div>
-
-            {order.printfulDetails?.recipient && (
-              <div className="bg-primary/5 rounded-lg p-4 mt-6">
-                <h3 className="font-serif mb-2">Shipping Address</h3>
-                <p className="text-neutral/70">
-                  {order.printfulDetails.recipient.name}<br />
-                  {order.printfulDetails.recipient.address1}<br />
-                  {order.printfulDetails.recipient.address2 && (
-                    <>{order.printfulDetails.recipient.address2}<br /></>
-                  )}
-                  {order.printfulDetails.recipient.city}, {order.printfulDetails.recipient.state} {order.printfulDetails.recipient.zip}<br />
-                  {order.printfulDetails.recipient.country}
-                </p>
-              </div>
-            )}
           </div>
         </motion.div>
-      </div >
-    </div >
-  )
+      </div>
+    </div>
+  );
 }
