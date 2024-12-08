@@ -162,12 +162,30 @@ function useCheckoutFlow() {
 			const { clientSecret, error: backendError } = await response.json();
 			if (backendError) throw new Error(backendError);
 
+			// Create order first
+			const orderResponse = await fetch('/api/orders', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					paymentIntentId: paymentIntentId,
+					items: cart,
+					shipping: selectedRate,
+				}),
+			});
+
+			if (!orderResponse.ok) {
+				throw new Error('Failed to create order');
+			}
+
+			const { orderId } = await orderResponse.json();
+			console.log('Order created successfully:', orderId);
+
+			// Then confirm payment with order ID in return URL
 			const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
 				elements,
 				clientSecret,
-				// redirect: 'if_required',
 				confirmParams: {
-					return_url: `${window.location.origin}/checkout/success`,
+					return_url: `${window.location.origin}/orders/${orderId}`,
 					payment_method_data: {
 						billing_details: {
 							email: email,
@@ -181,21 +199,6 @@ function useCheckoutFlow() {
 			}
 
 			if (paymentIntent.status === 'succeeded') {
-				const orderResponse = await fetch('/api/orders', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						paymentIntentId: paymentIntent.id,
-						items: cart,
-						shipping: selectedRate,
-					}),
-				});
-
-				if (!orderResponse.ok) {
-					throw new Error('Failed to create order');
-				}
-
-				const { orderId } = await orderResponse.json();
 				clearCart();
 				router.push(`/orders/${orderId}`);
 			}

@@ -153,137 +153,213 @@ export default function OrderPage({ params }: { params: { id: string } }) {
   const StatusIcon = statusMap[order.status as keyof typeof statusMap]?.icon || Clock
 
   return (
-    <div className="min-h-screen bg-base-100 py-12">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <motion.div
+    <div className="min-h-screen py-12">
+      <div className="container mx-auto px-4 max-w-4xl space-y-12">
+        {/* Back Link */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <Link 
+            href="/" 
+            className="inline-flex items-center text-sm text-neutral-600 hover:text-neutral-900 transition-colors group"
+          >
+            <svg 
+              className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Shop
+          </Link>
+        </motion.div>
+
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-2"
+        >
+          <h1 className="text-3xl font-medium">Your Order Confirmed!</h1>
+          <p className="text-neutral-600 text-lg">
+            Hello! Your order has been confirmed and will be shipping within the next few days.
+          </p>
+        </motion.div>
+
+        {/* Order Info */}
+        <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-base-100 rounded-lg overflow-hidden"
+          transition={{ delay: 0.2 }}
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 py-8 border-y"
         >
-          <div className="bg-warning/10 p-4 text-warning text-sm">
-            Note: This order link can be shared, but please be cautious about sharing order details.
-          </div>
-
-          <div className="p-6 border-b border-base-200">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-serif text-neutral mb-2">Order #{order.id}</h1>
-                <p className="text-neutral/70">
-                  Placed on {new Date(order.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-2 ${statusMap[order.status as keyof typeof statusMap]?.color || 'text-neutral'}`}>
-                  <StatusIcon className="h-5 w-5" />
-                  <span className="font-medium">
-                    {statusMap[order.status as keyof typeof statusMap]?.label || order.status}
-                  </span>
-                </div>
-                <button
-                  onClick={handleShare}
-                  className="btn btn-ghost btn-sm"
-                >
-                  <Share2 className="h-5 w-5" />
-                  {shareClicked && <span className="ml-2">Copied!</span>}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {order.printfulDetails && (
-            <div className="bg-primary/5 p-6 m-6 rounded-lg">
-              <h3 className="font-serif text-lg mb-4">Shipping Status</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span>Status:</span>
-                  <span>{order.printfulDetails.status}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Shipping Method:</span>
-                  <span>{order.printfulDetails.shipping_service}</span>
-                </div>
-                {order.printfulDetails.estimated_delivery && (
-                  <div className="flex justify-between">
-                    <span>Estimated Delivery:</span>
-                    <span>{new Date(order.printfulDetails.estimated_delivery).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-
-              {order.printfulDetails.shipments.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-base-200">
-                  <h4 className="font-medium mb-3">Tracking Information</h4>
-                  {order.printfulDetails.shipments.map((shipment, index) => (
-                    <div key={index} className="bg-base-100 p-4 rounded-lg mb-2">
-                      <div className="flex justify-between mb-2">
-                        <span>{shipment.carrier} - {shipment.service}</span>
-                        <span className="badge badge-primary">{shipment.status}</span>
-                      </div>
-                      {shipment.tracking_number && (
-                        <div className="text-sm">
-                          <p className="mb-2">Tracking Number: {shipment.tracking_number}</p>
-                          {shipment.tracking_url && (
-                            <Link
-                              href={shipment.tracking_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-sm btn-outline"
-                            >
-                              Track Package
-                            </Link>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="space-y-1"
+          >
+            <div className="font-medium text-neutral-400">Order Date</div>
+            <div className="text-neutral-900">{new Date(order.createdAt).toLocaleDateString()}</div>
+          </motion.div>
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="space-y-1"
+          >
+            <div className="font-medium text-neutral-400">Order No</div>
+            <div className="text-neutral-900 font-mono">{order.id}</div>
+          </motion.div>
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="space-y-1"
+          >
+            <div className="font-medium text-neutral-400">Payment</div>
+            <div className="text-neutral-900">•••• {order.stripePaymentId?.slice(-4)}</div>
+          </motion.div>
+          {order.printfulDetails?.recipient && (
+            <motion.div 
+              whileHover={{ scale: 1.02 }}
+              className="space-y-1"
+            >
+              <div className="font-medium text-neutral-400">Ships To</div>
+              <div className="text-neutral-900">{order.printfulDetails.recipient.city}</div>
+            </motion.div>
           )}
+        </motion.div>
 
-          <div className="p-6">
-            {order.orderItems.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 border-b border-base-200 pb-4 mb-4">
-                <div className="relative h-20 w-20">
+        {/* Order Items */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-6"
+        >
+          <h2 className="text-xl font-medium">Order Items</h2>
+          <div className="space-y-6">
+            {order.orderItems.map((item, index) => (
+              <motion.div 
+                key={item.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 * index }}
+                whileHover={{ scale: 1.01 }}
+                className="flex items-center gap-6 p-4 rounded-lg hover:bg-neutral-50 transition-colors"
+              >
+                <Link href={`/product/${item.product.id}`} className="relative h-24 w-24 bg-neutral-50 rounded-lg overflow-hidden">
                   <Image
                     src={item.product.image}
                     alt={item.product.name}
                     fill
-                    className="object-cover rounded-lg"
+                    className="object-cover transition-transform hover:scale-105"
                   />
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <Link 
+                    href={`/product/${item.product.id}`}
+                    className="font-medium hover:text-primary transition-colors line-clamp-1"
+                  >
+                    {item.product.name}
+                  </Link>
+                  <p className="text-sm text-neutral-500 mt-1">Quantity: {item.quantity}</p>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">{item.product.name}</h3>
-                  <p className="text-neutral/70">Quantity: {item.quantity}</p>
-                </div>
-                <p className="font-medium">
+                <div className="font-medium whitespace-nowrap">
                   €{(item.price * item.quantity).toFixed(2)}
-                </p>
-              </div>
+                </div>
+              </motion.div>
             ))}
-
-            <div className="flex justify-between items-center pt-4">
-              <span className="font-serif text-lg">Total</span>
-              <span className="font-serif text-lg">€{order.total.toFixed(2)}</span>
-            </div>
-
-            {order.printfulDetails?.recipient && (
-              <div className="bg-primary/5 rounded-lg p-4 mt-6">
-                <h3 className="font-serif mb-2">Shipping Address</h3>
-                <p className="text-neutral/70">
-                  {order.printfulDetails.recipient.name}<br />
-                  {order.printfulDetails.recipient.address1}<br />
-                  {order.printfulDetails.recipient.address2 && (
-                    <>{order.printfulDetails.recipient.address2}<br /></>
-                  )}
-                  {order.printfulDetails.recipient.city}, {order.printfulDetails.recipient.state} {order.printfulDetails.recipient.zip}<br />
-                  {order.printfulDetails.recipient.country}
-                </p>
-              </div>
-            )}
           </div>
         </motion.div>
-      </div >
-    </div >
+
+        {/* Order Summary */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="space-y-3 max-w-sm ml-auto"
+        >
+          <div className="flex justify-between text-sm">
+            <span className="text-neutral-600">Subtotal</span>
+            <motion.span whileHover={{ scale: 1.05 }}>
+              €{(order.total - (order.printfulDetails?.costs.shipping ? parseFloat(order.printfulDetails.costs.shipping) : 0)).toFixed(2)}
+            </motion.span>
+          </div>
+          {order.printfulDetails?.costs.shipping && (
+            <div className="flex justify-between text-sm">
+              <span className="text-neutral-600">Shipping Fee</span>
+              <motion.span whileHover={{ scale: 1.05 }}>
+                €{parseFloat(order.printfulDetails.costs.shipping).toFixed(2)}
+              </motion.span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg pt-3 border-t font-medium">
+            <span>Total</span>
+            <motion.span whileHover={{ scale: 1.05 }}>
+              €{order.total.toFixed(2)}
+            </motion.span>
+          </div>
+        </motion.div>
+
+        {/* Shipping Status */}
+        {order.printfulDetails && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="space-y-4"
+          >
+            <h2 className="text-xl font-medium">Shipping Information</h2>
+            <div className="flex items-center gap-3 text-neutral-600">
+              <StatusIcon className="h-5 w-5" />
+              <span>
+                {order.printfulDetails.status} - Estimated delivery: {' '}
+                {order.printfulDetails.estimated_delivery 
+                  ? new Date(order.printfulDetails.estimated_delivery).toLocaleDateString()
+                  : 'To be determined'}
+              </span>
+            </div>
+            {order.printfulDetails.shipments.map((shipment, index) => (
+              shipment.tracking_url && (
+                <motion.div
+                  key={index}
+                  whileHover={{ scale: 1.01 }}
+                >
+                  <Link
+                    href={shipment.tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:text-primary-focus transition-colors"
+                  >
+                    Track Package
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </motion.div>
+              )
+            ))}
+          </motion.div>
+        )}
+
+        {/* Footer */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="text-center space-y-4 pt-8 border-t"
+        >
+          <p className="text-neutral-600">
+            Need help? {' '}
+            <Link href="/help" className="text-primary hover:text-primary-focus transition-colors">
+              Visit our Help Center
+            </Link>
+            {' '} or {' '}
+            <Link href="/contact" className="text-primary hover:text-primary-focus transition-colors">
+              contact us
+            </Link>.
+          </p>
+          <p className="text-neutral-500">Thank you for shopping with us!</p>
+        </motion.div>
+      </div>
+    </div>
   )
 }
