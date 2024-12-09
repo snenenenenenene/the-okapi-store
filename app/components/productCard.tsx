@@ -48,7 +48,7 @@ export function ProductCard({ product }: ProductCardProps) {
           rotateY,
           transformStyle: "preserve-3d",
         }}
-        className="relative aspect-[4/5] overflow-hidden rounded-xl bg-sandstone-300/90 dark:bg-vintage-wash"
+        className="relative aspect-[4/5] overflow-hidden rounded-xl bg-slate-300/90 dark:bg-vintage-wash"
       >
         {product.image && (
           <motion.div
@@ -68,14 +68,14 @@ export function ProductCard({ product }: ProductCardProps) {
       </motion.div>
 
       <div className="mt-4 space-y-1">
-        <h3 className="text-lg font-medium text-sandstone-900 dark:text-slate-50">
+        <h3 className="text-lg font-medium text-slate-900 dark:text-slate-50">
           {product.name}
         </h3>
         <div className="flex items-baseline gap-2">
-          <p className="text-base font-medium text-sandstone-900 dark:text-slate-50">
+          <p className="text-base font-medium text-slate-900 dark:text-slate-50">
             {formatEuroPrice(product.retail_price)}
           </p>
-          <p className="text-sm text-sandstone-500 dark:text-slate-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Excl. VAT
           </p>
         </div>

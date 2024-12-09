@@ -104,26 +104,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
     fetchProduct();
   }, [id]);
 
-  useEffect(() => {
-    const fetchSizeGuide = async () => {
-      try {
-        // Use the product ID directly for size guide
-        const response = await fetch(`/api/printful/products/${product?.id}/sizes?unit=${selectedUnit}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSizeGuide(data);
-        } else if (response.status === 404) {
-          console.log("Size guide not available for this product");
-        }
-      } catch (error) {
-        console.error("Failed to fetch size guide:", error);
-      }
-    };
-
-    if (product?.id) {
-      fetchSizeGuide();
-    }
-  }, [product?.id, selectedUnit]);
 
   useEffect(() => {
     const updateButtonPositions = () => {
@@ -163,7 +143,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
   if (!product) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-sandstone-900 dark:text-slate-50" />
+        <Loader2 className="h-8 w-8 animate-spin text-slate-900 dark:text-slate-50" />
       </div>
     );
   }
@@ -173,7 +153,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
       <div className="grid grid-cols-1 gap-x-16 gap-y-10 lg:grid-cols-2">
         {/* Product Image */}
         <motion.div
-          className="relative aspect-square overflow-hidden rounded-2xl bg-sandstone-100/80 dark:bg-slate-800/50 lg:sticky lg:top-32"
+          className="relative aspect-square overflow-hidden rounded-2xl bg-slate-100/80 dark:bg-slate-800/50 lg:sticky lg:top-32"
           onMouseMove={onMouseMove}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => {
@@ -206,7 +186,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           </motion.div>
           {imageLoading && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-sandstone-900 dark:text-slate-50" />
+              <Loader2 className="h-8 w-8 animate-spin text-slate-900 dark:text-slate-50" />
             </div>
           )}
         </motion.div>
@@ -215,11 +195,11 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
         <div className="space-y-10">
           {/* Title and Price */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-sandstone-900 dark:text-slate-50">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">
               {product.name}
             </h1>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-sandstone-900 dark:text-slate-50">
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-50">
                 {selectedVariant ? formatEuroPrice(parseFloat(selectedVariant.price)) : ''}
               </span>
             </div>
@@ -227,16 +207,16 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
 
           {/* Product Features */}
           <div className="space-y-2">
-            <ul className="space-y-2 text-sandstone-700 dark:text-slate-300">
+            <ul className="space-y-2 text-slate-700 dark:text-slate-300">
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-sandstone-400 dark:bg-slate-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
                 {product.description}
               </li>
             </ul>
           </div>
 
           {/* Model Info */}
-          <div className="space-y-1 text-sm text-sandstone-600 dark:text-slate-400">
+          <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
             <p>Narrows is 180cm (5'9") and wears a Size L</p>
             <p>Hayley is 155cm (5'1") and wears a Size S</p>
           </div>
@@ -244,104 +224,17 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           {/* Size Selection */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label className="text-lg font-medium text-sandstone-900 dark:text-slate-50">
+              <label className="text-lg font-medium text-black dark:text-slate-50">
                 SIZE: {selectedVariant?.size || 'Select Size'}
               </label>
-              <button
-                onClick={() => setShowSizeGuide(!showSizeGuide)}
-                className="text-sm font-medium text-sandstone-600 hover:text-sandstone-900 dark:text-slate-400 dark:hover:text-slate-50 flex items-center gap-1"
-              >
-                Size Guide
-                <ChevronDown className={`h-4 w-4 transition-transform ${showSizeGuide ? 'rotate-180' : ''}`} />
-              </button>
             </div>
 
-            {showSizeGuide && sizeGuide && (
-              <div className="mt-8">
-                <h3 className="text-lg font-medium">Size Guide</h3>
-                
-                {/* Unit Toggle */}
-                <div className="flex gap-4 mt-2 mb-4">
-                  <button
-                    className={`px-3 py-1 rounded ${selectedUnit === 'cm' ? 'bg-gray-200' : ''}`}
-                    onClick={() => setSelectedUnit('cm')}
-                  >
-                    CM
-                  </button>
-                  <button
-                    className={`px-3 py-1 rounded ${selectedUnit === 'inches' ? 'bg-gray-200' : ''}`}
-                    onClick={() => setSelectedUnit('inches')}
-                  >
-                    Inches
-                  </button>
-                </div>
-
-                {/* Size Tables */}
-                {sizeGuide.size_tables.map((table, tableIndex) => (
-                  <div key={tableIndex} className="mb-8">
-                    <h4 className="font-medium mb-2 capitalize">{table.type.replace('_', ' ')}</h4>
-                    
-                    {table.description && (
-                      <div className="text-sm text-gray-600 mb-4" 
-                           dangerouslySetInnerHTML={{ __html: table.description }} 
-                      />
-                    )}
-                    
-                    {/* Measurement Table */}
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead>
-                          <tr>
-                            <th className="px-4 py-2 bg-gray-50">Measurement</th>
-                            {sizeGuide.available_sizes.map(size => (
-                              <th key={size} className="px-4 py-2 bg-gray-50">{size}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {table.measurements.map((measurement, measurementIndex) => (
-                            <tr key={measurementIndex}>
-                              <td className="px-4 py-2 font-medium">{measurement.type_label}</td>
-                              {measurement.values.map((value, valueIndex) => (
-                                <td key={valueIndex} className="px-4 py-2">
-                                  {value.value ? 
-                                    value.value : 
-                                    `${value.min_value} - ${value.max_value}`}
-                                  {table.unit !== 'none' && ` ${table.unit}`}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Measurement Guide Image */}
-                    {table.image_url && (
-                      <div className="mt-4">
-                        <img 
-                          src={table.image_url} 
-                          alt="Measurement guide" 
-                          className="max-w-full h-auto"
-                        />
-                        {table.image_description && (
-                          <div 
-                            className="text-sm text-gray-600 mt-2"
-                            dangerouslySetInnerHTML={{ __html: table.image_description }}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
+         
             <div className="flex gap-2" ref={sizePickerRef}>
               <AnimatePresence>
                 {selectedVariant && (
                   <motion.div
-                    className="absolute h-12 w-12 rounded-full border-2 border-sandstone-900 dark:border-slate-50"
+                    className="absolute h-12 w-12 rounded-full border-2 border-black dark:border-slate-50"
                     initial={false}
                     animate={{
                       x: getIndicatorPosition().x,
@@ -368,15 +261,15 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
                     variant.availability_status !== 'active'
                       ? "cursor-not-allowed opacity-50"
                       : selectedVariant?.id === variant.id
-                        ? "bg-sandstone-900 text-white dark:bg-slate-50 dark:text-slate-900"
-                        : "text-sandstone-900 hover:bg-sandstone-100 dark:text-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900"
+                        : "text-slate-900 hover:bg-slate-100 dark:text-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 leading-none">
                     {variant.size}
                   </span>
                   {variant.availability_status !== 'active' && (
-                    <span className="absolute -bottom-6 text-xs text-sandstone-500 dark:text-slate-400">
+                    <span className="absolute -bottom-6 text-xs text-slate-500 dark:text-slate-400">
                       Sold Out
                     </span>
                   )}
@@ -402,7 +295,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
               }
             }}
             disabled={!selectedVariant || selectedVariant.availability_status !== 'active'}
-            className="group relative w-full rounded-xl bg-sandstone-900 px-8 py-4 text-lg font-medium text-white transition-colors hover:bg-sandstone-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200"
+            className="group relative w-full rounded-xl bg-slate-900 px-8 py-4 text-lg font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200"
           >
             <span className="flex items-center justify-center gap-x-2">
               <ShoppingBag className="h-5 w-5" />
@@ -412,101 +305,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
             </span>
           </button>
 
-          {/* Product Info */}
-          <div className="space-y-6 pt-10">
-            <Accordion.Root type="single" collapsible className="space-y-6">
-              <Accordion.Item value="size-guide" className="overflow-hidden">
-                <Accordion.Trigger className="group flex w-full items-center justify-between py-4 text-left text-lg font-medium text-sandstone-900 transition-colors hover:text-sandstone-600 dark:text-slate-50 dark:hover:text-slate-300">
-                  Size Guide
-                  <ChevronDown className="h-5 w-5 transform transition-transform duration-200 ease-in-out group-data-[state=open]:rotate-180" />
-                </Accordion.Trigger>
-                <Accordion.Content className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                  <div className="pb-6 pt-4">
-                    {sizeGuide && (
-                      <div className="mt-8">
-                        <h3 className="text-lg font-medium">Size Guide</h3>
-                        
-                        {/* Unit Toggle */}
-                        <div className="flex gap-4 mt-2 mb-4">
-                          <button
-                            className={`px-3 py-1 rounded ${selectedUnit === 'cm' ? 'bg-gray-200' : ''}`}
-                            onClick={() => setSelectedUnit('cm')}
-                          >
-                            CM
-                          </button>
-                          <button
-                            className={`px-3 py-1 rounded ${selectedUnit === 'inches' ? 'bg-gray-200' : ''}`}
-                            onClick={() => setSelectedUnit('inches')}
-                          >
-                            Inches
-                          </button>
-                        </div>
-
-                        {/* Size Tables */}
-                        {sizeGuide.size_tables.map((table, tableIndex) => (
-                          <div key={tableIndex} className="mb-8">
-                            <h4 className="font-medium mb-2 capitalize">{table.type.replace('_', ' ')}</h4>
-                            
-                            {table.description && (
-                              <div className="text-sm text-gray-600 mb-4" 
-                                   dangerouslySetInnerHTML={{ __html: table.description }} 
-                              />
-                            )}
-                            
-                            {/* Measurement Table */}
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full divide-y divide-gray-200">
-                                <thead>
-                                  <tr>
-                                    <th className="px-4 py-2 bg-gray-50">Measurement</th>
-                                    {sizeGuide.available_sizes.map(size => (
-                                      <th key={size} className="px-4 py-2 bg-gray-50">{size}</th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                  {table.measurements.map((measurement, measurementIndex) => (
-                                    <tr key={measurementIndex}>
-                                      <td className="px-4 py-2 font-medium">{measurement.type_label}</td>
-                                      {measurement.values.map((value, valueIndex) => (
-                                        <td key={valueIndex} className="px-4 py-2">
-                                          {value.value ? 
-                                            value.value : 
-                                            `${value.min_value} - ${value.max_value}`}
-                                          {table.unit !== 'none' && ` ${table.unit}`}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {/* Measurement Guide Image */}
-                            {table.image_url && (
-                              <div className="mt-4">
-                                <img 
-                                  src={table.image_url} 
-                                  alt="Measurement guide" 
-                                  className="max-w-full h-auto"
-                                />
-                                {table.image_description && (
-                                  <div 
-                                    className="text-sm text-gray-600 mt-2"
-                                    dangerouslySetInnerHTML={{ __html: table.image_description }}
-                                  />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </Accordion.Content>
-              </Accordion.Item>
-            </Accordion.Root>
-          </div>
         </div>
       </div>
     </div>

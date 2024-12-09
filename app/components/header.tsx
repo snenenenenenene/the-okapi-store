@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingBag, User, Menu, X } from 'lucide-react'
+import { ShoppingBag, User, Menu, X, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { Cart } from '@/components/cart'
 import { signIn, signOut, useSession } from "next-auth/react"
@@ -20,7 +20,7 @@ export function Header() {
 
 	return (
 		<>
-			<header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-white/80 dark:bg-neutral-950/80 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-neutral-950/60 border-b border-neutral-200 dark:border-neutral-800">
+			<header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-white/80 dark:bg-neutral-950/80 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-neutral-950/60">
 				<div className="container mx-auto px-4">
 					<div className="flex h-16 items-center justify-between">
 						{/* Logo */}
@@ -91,9 +91,9 @@ export function Header() {
 									onClick={toggleCart}
 									className="relative p-2 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
 								>
-									<ShoppingBag className="w-5 h-5" />
+									<ShoppingCart className="w-5 h-5" />
 									{getTotalItems() > 0 && (
-										<span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-xs flex items-center justify-center rounded-full">
+										<span className="absolute -top-1 -right-1 rounded-full bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-50">
 											{getTotalItems()}
 										</span>
 									)}
