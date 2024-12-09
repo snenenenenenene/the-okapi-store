@@ -66,10 +66,6 @@ export async function POST(req: Request) {
       is_draft: true,
     };
 
-    
-      "Printful order data:",
-      JSON.stringify(printfulOrderData, null, 2)
-    );
 
     const response = await fetch(`${PRINTFUL_API_URL}/orders`, {
       method: "POST",

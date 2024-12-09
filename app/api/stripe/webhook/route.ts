@@ -39,22 +39,14 @@ export async function POST(req: Request) {
       
       const charge = event.data.object as Stripe.Charge;
       
-      
-        raw: charge.metadata,
-        itemsType: typeof charge.metadata?.items,
-        itemsLength: charge.metadata?.items?.length
-      });
+
 
       // Get payment intent
       const paymentIntent = await stripe.paymentIntents.retrieve(
         charge.payment_intent as string
       );
       
-      
-        raw: paymentIntent.metadata,
-        itemsType: typeof paymentIntent.metadata?.items,
-        itemsLength: paymentIntent.metadata?.items?.length
-      });
+
 
       // Parse cart items
       let cartItems;

@@ -83,11 +83,7 @@ export async function POST(req: Request) {
       customer_email: session?.user?.email,
     });
 
-    
-      id: checkoutSession.id,
-      successUrl: checkoutSession.success_url,
-      cancelUrl: checkoutSession.cancel_url
-    });
+
 
     return NextResponse.json({
       sessionId: checkoutSession.id,
