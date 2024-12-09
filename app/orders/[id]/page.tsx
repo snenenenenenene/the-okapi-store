@@ -79,7 +79,7 @@ const statusMap = {
   delivered: { icon: CheckCircle, label: 'Delivered', color: 'text-success' }
 }
 
-export default function OrderPage({ params }: { params: { id: string } }) {
+export default async function OrderPage({ params }: { params: { id: string } }) {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -153,7 +153,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
   const StatusIcon = statusMap[order.status as keyof typeof statusMap]?.icon || Clock
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 dark:bg-neutral-900">
       <div className="container mx-auto px-4 max-w-4xl space-y-12">
         {/* Back Link */}
         <motion.div 
@@ -162,7 +162,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
         >
           <Link 
             href="/" 
-            className="inline-flex items-center text-sm text-neutral-600 hover:text-neutral-900 transition-colors group"
+            className="group inline-flex items-center text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
           >
             <svg 
               className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" 
@@ -183,7 +183,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
           className="space-y-2"
         >
           <h1 className="text-3xl font-medium">Your Order Confirmed!</h1>
-          <p className="text-neutral-600 text-lg">
+          <p className="text-neutral-600 dark:text-neutral-400 text-lg">
             Hello! Your order has been confirmed and will be shipping within the next few days.
           </p>
         </motion.div>
@@ -193,36 +193,36 @@ export default function OrderPage({ params }: { params: { id: string } }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 py-8 border-y"
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 py-8 border-y border-neutral-200 dark:border-neutral-800"
         >
           <motion.div 
             whileHover={{ scale: 1.02 }}
             className="space-y-1"
           >
-            <div className="font-medium text-neutral-400">Order Date</div>
-            <div className="text-neutral-900">{new Date(order.createdAt).toLocaleDateString()}</div>
+            <div className="font-medium text-neutral-500 dark:text-neutral-400">Order Date</div>
+            <div>{new Date(order.createdAt).toLocaleDateString()}</div>
           </motion.div>
           <motion.div 
             whileHover={{ scale: 1.02 }}
             className="space-y-1"
           >
-            <div className="font-medium text-neutral-400">Order No</div>
-            <div className="text-neutral-900 font-mono">{order.id}</div>
+            <div className="font-medium text-neutral-500 dark:text-neutral-400">Order No</div>
+            <div className="font-mono">{order.id}</div>
           </motion.div>
           <motion.div 
             whileHover={{ scale: 1.02 }}
             className="space-y-1"
           >
-            <div className="font-medium text-neutral-400">Payment</div>
-            <div className="text-neutral-900">•••• {order.stripePaymentId?.slice(-4)}</div>
+            <div className="font-medium text-neutral-500 dark:text-neutral-400">Payment</div>
+            <div>•••• {order.stripePaymentId?.slice(-4)}</div>
           </motion.div>
           {order.printfulDetails?.recipient && (
             <motion.div 
               whileHover={{ scale: 1.02 }}
               className="space-y-1"
             >
-              <div className="font-medium text-neutral-400">Ships To</div>
-              <div className="text-neutral-900">{order.printfulDetails.recipient.city}</div>
+              <div className="font-medium text-neutral-500 dark:text-neutral-400">Ships To</div>
+              <div>{order.printfulDetails.recipient.city}</div>
             </motion.div>
           )}
         </motion.div>
@@ -235,7 +235,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
           className="space-y-6"
         >
           <h2 className="text-xl font-medium">Order Items</h2>
-          <div className="space-y-6">
+          <div className="space-y-4">
             {order.orderItems.map((item, index) => (
               <motion.div 
                 key={item.id}
@@ -243,9 +243,9 @@ export default function OrderPage({ params }: { params: { id: string } }) {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * index }}
                 whileHover={{ scale: 1.01 }}
-                className="flex items-center gap-6 p-4 rounded-lg hover:bg-neutral-50 transition-colors"
+                className="flex items-center gap-6 p-4 rounded-lg bg-white dark:bg-neutral-800 shadow-sm hover:shadow-md transition-all"
               >
-                <Link href={`/product/${item.product.id}`} className="relative h-24 w-24 bg-neutral-50 rounded-lg overflow-hidden">
+                <Link href={`/product/${item.product.id}`} className="relative h-24 w-24 bg-neutral-50 dark:bg-neutral-700 rounded-lg overflow-hidden">
                   <Image
                     src={item.product.image}
                     alt={item.product.name}
@@ -256,11 +256,11 @@ export default function OrderPage({ params }: { params: { id: string } }) {
                 <div className="flex-1 min-w-0">
                   <Link 
                     href={`/product/${item.product.id}`}
-                    className="font-medium hover:text-primary transition-colors line-clamp-1"
+                    className="font-medium hover:text-primary dark:hover:text-neutral-100 transition-colors line-clamp-1"
                   >
                     {item.product.name}
                   </Link>
-                  <p className="text-sm text-neutral-500 mt-1">Quantity: {item.quantity}</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">Quantity: {item.quantity}</p>
                 </div>
                 <div className="font-medium whitespace-nowrap">
                   €{(item.price * item.quantity).toFixed(2)}
@@ -278,20 +278,20 @@ export default function OrderPage({ params }: { params: { id: string } }) {
           className="space-y-3 max-w-sm ml-auto"
         >
           <div className="flex justify-between text-sm">
-            <span className="text-neutral-600">Subtotal</span>
+            <span className="text-neutral-600 dark:text-neutral-400">Subtotal</span>
             <motion.span whileHover={{ scale: 1.05 }}>
               €{(order.total - (order.printfulDetails?.costs.shipping ? parseFloat(order.printfulDetails.costs.shipping) : 0)).toFixed(2)}
             </motion.span>
           </div>
           {order.printfulDetails?.costs.shipping && (
             <div className="flex justify-between text-sm">
-              <span className="text-neutral-600">Shipping Fee</span>
+              <span className="text-neutral-600 dark:text-neutral-400">Shipping Fee</span>
               <motion.span whileHover={{ scale: 1.05 }}>
                 €{parseFloat(order.printfulDetails.costs.shipping).toFixed(2)}
               </motion.span>
             </div>
           )}
-          <div className="flex justify-between text-lg pt-3 border-t font-medium">
+          <div className="flex justify-between text-lg pt-3 border-t border-neutral-200 dark:border-neutral-800 font-medium">
             <span>Total</span>
             <motion.span whileHover={{ scale: 1.05 }}>
               €{order.total.toFixed(2)}
@@ -308,7 +308,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
             className="space-y-4"
           >
             <h2 className="text-xl font-medium">Shipping Information</h2>
-            <div className="flex items-center gap-3 text-neutral-600">
+            <div className="flex items-center gap-3 text-neutral-600 dark:text-neutral-400">
               <StatusIcon className="h-5 w-5" />
               <span>
                 {order.printfulDetails.status} - Estimated delivery: {' '}
@@ -327,7 +327,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
                     href={shipment.tracking_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-primary hover:text-primary-focus transition-colors"
+                    className="inline-flex items-center gap-2 text-primary dark:text-neutral-100 hover:text-primary-focus dark:hover:text-neutral-200 transition-colors"
                   >
                     Track Package
                     <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -345,19 +345,19 @@ export default function OrderPage({ params }: { params: { id: string } }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="text-center space-y-4 pt-8 border-t"
+          className="text-center space-y-4 pt-8 border-t border-neutral-200 dark:border-neutral-800"
         >
-          <p className="text-neutral-600">
+          <p className="text-neutral-600 dark:text-neutral-400">
             Need help? {' '}
-            <Link href="/help" className="text-primary hover:text-primary-focus transition-colors">
+            <Link href="/help" className="text-primary dark:text-neutral-100 hover:text-primary-focus dark:hover:text-neutral-200 transition-colors">
               Visit our Help Center
             </Link>
             {' '} or {' '}
-            <Link href="/contact" className="text-primary hover:text-primary-focus transition-colors">
+            <Link href="/contact" className="text-primary dark:text-neutral-100 hover:text-primary-focus dark:hover:text-neutral-200 transition-colors">
               contact us
             </Link>.
           </p>
-          <p className="text-neutral-500">Thank you for shopping with us!</p>
+          <p className="text-neutral-500 dark:text-neutral-600">Thank you for shopping with us!</p>
         </motion.div>
       </div>
     </div>

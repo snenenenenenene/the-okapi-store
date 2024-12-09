@@ -78,3 +78,73 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { cart, shippingAddress, shippingRate, paymentIntentId } = await request.json();
+
+    // Find or create user
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Calculate totals
+    const subtotal = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+    const shipping = shippingRate ? Number(shippingRate.rate) : 0;
+    const total = subtotal + shipping;
+
+    // Create the order
+    const order = await prisma.order.create({
+      data: {
+        userId: user.id,
+        status: 'processing',
+        total: total,
+        subtotal: subtotal,
+        shipping: shipping,
+        shippingAddress: shippingAddress,
+        shippingMethod: shippingRate?.name || 'Standard Shipping',
+        paymentIntentId: paymentIntentId,
+        orderItems: {
+          create: cart.map((item: any) => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price,
+            size: item.size
+          }))
+        }
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: true
+          }
+        },
+        user: true
+      }
+    });
+
+    return NextResponse.json(order);
+  } catch (error) {
+    console.error('Error creating order:', error);
+    return NextResponse.json(
+      { error: 'Failed to create order' },
+      { status: 500 }
+    );
+  }
+}

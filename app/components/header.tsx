@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/cartStore'
 import { Cart } from '@/components/cart'
 import { signIn, signOut, useSession } from "next-auth/react"
 import { useEffect, useState } from 'react'
+import { ThemeToggle } from './theme-toggle'
 
 export function Header() {
 	const { data: session, status } = useSession()
@@ -18,90 +19,147 @@ export function Header() {
 	}, [fetchProducts])
 
 	return (
-		<header className="bg-base-100 text-neutral font-satoshi">
-			<div className="container mx-auto px-4 navbar">
-				<div className="flex-1">
-					<Link href="/" className="btn btn-ghost normal-case text-xl">
-						<Image src="/images/okapi-logo.png" alt="The Okapi Store Logo" width={40} height={40} />
-						<span className="ml-2 hidden sm:inline">The Okapi Store</span>
-					</Link>
+		<>
+			<header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-white/80 dark:bg-neutral-950/80 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-neutral-950/60 border-b border-neutral-200 dark:border-neutral-800">
+				<div className="container mx-auto px-4">
+					<div className="flex h-16 items-center justify-between">
+						{/* Logo */}
+						<Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+							<Image 
+								src="/images/okapi-logo.png" 
+								alt="The Okapi Store Logo" 
+								width={32} 
+								height={32}
+								className="w-8 h-8"
+							/>
+							<span className="hidden sm:block font-medium">The Okapi Store</span>
+						</Link>
+
+						{/* Desktop navigation */}
+						<nav className="hidden lg:flex items-center gap-8">
+							<Link 
+								href="/about" 
+								className="text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+							>
+								About
+							</Link>
+							{status === "loading" ? (
+								<div className="h-5 w-20 bg-neutral-100 dark:bg-neutral-800 animate-pulse rounded" />
+							) : session ? (
+								<div className="flex items-center gap-6">
+									<div className="dropdown dropdown-end">
+										<label tabIndex={0} className="flex items-center gap-2 cursor-pointer text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors">
+											<Image
+												src={session.user?.image || '/images/default-avatar.png'}
+												alt={session.user?.name || 'User'}
+												width={32}
+												height={32}
+												className="rounded-full"
+											/>
+											<span>{session.user?.name}</span>
+										</label>
+										<ul tabIndex={0} className="dropdown-content z-[1] mt-2 p-2 shadow-lg bg-white dark:bg-neutral-900 rounded-lg w-52 text-sm border border-neutral-200 dark:border-neutral-800">
+											<li>
+												<Link 
+													href="/orders" 
+													className="block px-4 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+												>
+													My Orders
+												</Link>
+											</li>
+											<li>
+												<button 
+													onClick={() => signOut()} 
+													className="w-full text-left px-4 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+												>
+													Sign Out
+												</button>
+											</li>
+										</ul>
+									</div>
+								</div>
+							) : (
+								<button
+									onClick={() => signIn()}
+									className="text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+								>
+									Sign In
+								</button>
+							)}
+							<div className="flex items-center gap-4">
+								<button 
+									onClick={toggleCart}
+									className="relative p-2 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+								>
+									<ShoppingBag className="w-5 h-5" />
+									{getTotalItems() > 0 && (
+										<span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-xs flex items-center justify-center rounded-full">
+											{getTotalItems()}
+										</span>
+									)}
+								</button>
+								<ThemeToggle />
+							</div>
+						</nav>
+
+						{/* Mobile menu button */}
+						<button
+							className="lg:hidden p-2 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+							onClick={() => setIsMenuOpen(!isMenuOpen)}
+						>
+							{isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+						</button>
+					</div>
 				</div>
 
-				<div className="flex items-center gap-2">
-					{/* Cart - Always visible */}
-					<button className="btn btn-ghost btn-circle" onClick={toggleCart}>
-						<div className="indicator">
-							<ShoppingBag size={20} />
-							{getTotalItems() > 0 && (
-								<span className="badge badge-sm indicator-item badge-secondary">{getTotalItems()}</span>
-							)}
-						</div>
-					</button>
-
-					{/* User menu - Always visible */}
-					<div className="hidden sm:block">
+				{/* Mobile menu */}
+				<div className={`lg:hidden ${isMenuOpen ? 'block' : 'hidden'}`}>
+					<nav className="container mx-auto px-4 py-4 space-y-4 bg-white/95 dark:bg-neutral-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-neutral-950/60 border-t border-neutral-200 dark:border-neutral-800">
+						<Link
+							href="/about"
+							className="block text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+							onClick={() => setIsMenuOpen(false)}
+						>
+							About
+						</Link>
 						{status === "authenticated" ? (
-							<div className="dropdown dropdown-end">
-								<label tabIndex={0} className="btn btn-ghost btn-circle avatar">
-									<div className="w-10 rounded-full">
-										<Image
-											src={session.user?.image || '/images/default-avatar.png'}
-											alt={session.user?.name || 'User'}
-											width={40}
-											height={40}
-										/>
-									</div>
-								</label>
-								<ul tabIndex={0} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
-									<li><Link href="/orders">My Orders</Link></li>
-									<li><a onClick={() => signOut()}>Logout</a></li>
-								</ul>
-							</div>
+							<>
+								<Link
+									href="/orders"
+									className="block text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+									onClick={() => setIsMenuOpen(false)}
+								>
+									My Orders
+								</Link>
+								<button
+									onClick={() => {
+										signOut()
+										setIsMenuOpen(false)
+									}}
+									className="block w-full text-left text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+								>
+									Sign Out
+								</button>
+							</>
 						) : (
-							<button onClick={() => signIn('google')} className="btn btn-ghost btn-circle">
-								<User size={20} />
+							<button
+								onClick={() => {
+									signIn()
+									setIsMenuOpen(false)
+								}}
+								className="block w-full text-left text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+							>
+								Sign In
 							</button>
 						)}
-					</div>
-
-					{/* Mobile menu button */}
-					<button
-						className="btn btn-ghost lg:hidden"
-						onClick={() => setIsMenuOpen(!isMenuOpen)}
-					>
-						{isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-					</button>
-
-					{/* Desktop navigation */}
-					<div className="hidden lg:flex">
-						<ul className="menu menu-horizontal px-1 flex items-center">
-							<li><Link href="/" className="hover:text-primary">Shop</Link></li>
-							<li><Link href="/about" className="hover:text-primary">About</Link></li>
-						</ul>
-					</div>
+						<div className="flex items-center justify-between pt-4 mt-4 border-t border-neutral-200 dark:border-neutral-800">
+							<ThemeToggle />
+						</div>
+					</nav>
 				</div>
-			</div>
-
-			{/* Mobile menu */}
-			{isMenuOpen && (
-				<div className="lg:hidden">
-					<ul className="menu menu-vertical px-4 py-2 bg-base-100 border-t">
-						<li><Link href="/" className="py-2">Shop</Link></li>
-						<li><Link href="/about" className="py-2">About</Link></li>
-						<li><Link href="/orders" className="py-2">My Orders</Link></li>
-						{/* Only show sign in/out in mobile menu if not shown in header */}
-						<li className="sm:hidden">
-							{status === "authenticated" ? (
-								<a onClick={() => signOut()} className="py-2">Logout</a>
-							) : (
-								<a onClick={() => signIn('google')} className="py-2">Sign In</a>
-							)}
-						</li>
-					</ul>
-				</div>
-			)}
+			</header>
 
 			{isCartOpen && <Cart />}
-		</header>
+		</>
 	)
 }
