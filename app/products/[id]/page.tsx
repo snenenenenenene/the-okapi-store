@@ -2,12 +2,10 @@
 
 import { useCartStore } from "@/store/cartStore";
 import { formatEuroPrice } from "@/utils/formatters";
-import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ChevronDown, Loader2, Ruler, ShoppingBag, Truck, X } from "lucide-react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { Loader2, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import * as Accordion from '@radix-ui/react-accordion';
-import { Dialog, DialogContent, DialogHeader, DialogDescription, DialogTitle } from '@/components/Dialog';
 
 interface Variant {
   id: number;
@@ -135,7 +133,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
       ? hoveredSize
       : product?.variants.findIndex((v: Variant) => v.id === selectedVariant?.id);
 
-    return sizeButtonPositions[index] || { x: 0, y: 0 };
+    return sizeButtonPositions[index as any] || { x: 0, y: 0 };
   };
 
   console.log("Product:", product);
@@ -215,11 +213,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
             </ul>
           </div>
 
-          {/* Model Info */}
-          <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
-            <p>Narrows is 180cm (5'9") and wears a Size L</p>
-            <p>Hayley is 155cm (5'1") and wears a Size S</p>
-          </div>
 
           {/* Size Selection */}
           <div className="space-y-4">

@@ -2,7 +2,6 @@
 
 import { NextResponse } from "next/server";
 import { PRINTFUL_API_URL } from "@/utils/env";
-import { ShippingAddress } from "@/types/checkout";
 
 export async function POST(req: Request) {
   try {

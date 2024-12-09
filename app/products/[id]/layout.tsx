@@ -1,8 +1,6 @@
 import { Metadata } from "next";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://theokapistore.com";
-const PRINTFUL_API_URL = 'https://api.printful.com';
-const PRINTFUL_TOKEN = process.env.PRINTFUL_TOKEN;
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
 	try {
@@ -22,20 +20,6 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 		return {
 			title: `${product.name} | The Okapi Store`,
 			description: product.description || 'A unique piece from The Okapi Store',
-			// openGraph: {
-			// 	title: `${product.name} | The Okapi Store`,
-			// 	description: product.description || 'A unique piece from The Okapi Store',
-			// 	url: `${BASE_URL}/products/${params.id}`,
-			// 	images: [
-			// 		{
-			// 			url: mainImage,
-			// 			width: 800,
-			// 			height: 600,
-			// 			alt: product.name,
-			// 		},
-			// 	],
-			// 	type: 'product',
-			// },
 			twitter: {
 				card: "summary_large_image",
 				title: `${product.name} | The Okapi Store`,

@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 export default function OrderSuccessPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { cart, email, shippingAddress, selectedRate, clearCart, clearCheckoutData } = useCartStore();
+  const { clearCart, clearCheckoutData } = useCartStore();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

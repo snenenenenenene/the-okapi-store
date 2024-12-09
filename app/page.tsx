@@ -4,7 +4,7 @@
 
 import { motion } from 'framer-motion'
 import { useCartStore } from '@/store/cartStore'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { ProductCard } from '@/components/productCard'
 
 export default function ProductsPage() {
