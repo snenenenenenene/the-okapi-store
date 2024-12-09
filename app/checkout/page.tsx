@@ -75,16 +75,6 @@ function useCheckoutFlow() {
 
 				setShippingAddress(formattedAddress);
 
-				
-					address: formattedAddress,
-					items: cart.map(item => ({
-						variant_id: item.variant_id,
-						quantity: item.quantity,
-						price: item.price
-					}))
-				}));
-
-
 
 				const response = await fetch('/api/printful/shipping-rates', {
 					method: 'POST',
