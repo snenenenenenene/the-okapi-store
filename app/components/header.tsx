@@ -43,7 +43,7 @@ export function Header() {
 							>
 								About
 							</Link>
-							{status === "loading" ? (
+							{/* {status === "loading" ? (
 								<div className="h-5 w-20 bg-neutral-100 dark:bg-neutral-800 animate-pulse rounded" />
 							) : session ? (
 								<div className="flex items-center gap-6">
@@ -85,7 +85,7 @@ export function Header() {
 								>
 									Sign In
 								</button>
-							)}
+							)} */}
 							<div className="flex items-center gap-4">
 								<button 
 									onClick={toggleCart}
@@ -122,7 +122,7 @@ export function Header() {
 						>
 							About
 						</Link>
-						{status === "authenticated" ? (
+						{/* {status === "authenticated" ? (
 							<>
 								<Link
 									href="/orders"
@@ -151,7 +151,7 @@ export function Header() {
 							>
 								Sign In
 							</button>
-						)}
+						)} */}
 						<div className="flex items-center justify-between pt-4 mt-4 border-t border-neutral-200 dark:border-neutral-800">
 							<ThemeToggle />
 						</div>

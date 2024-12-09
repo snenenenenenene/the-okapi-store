@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         });
         
         console.log("\nProcessed cart items:", cartItems);
-      } catch (error) {
+      } catch (error: any) {
         console.error("\n=== Cart Items Processing Error ===");
         console.error("Error details:", error);
         console.error("Error message:", error.message);
@@ -195,7 +195,7 @@ export async function POST(req: Request) {
       const printfulOrder = await createPrintfulOrder(
         charge,
         paymentIntent,
-        order
+        order as any
       );
 
       if (printfulOrder?.id) {

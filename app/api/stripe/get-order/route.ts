@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     }
 
     // Try to find the order
-    const order = await OrderService.findOrderByStripeData(sessionId);
+    const order = await (OrderService as any).findOrderByStripeData(sessionId);
 
     if (!order) {
       // Payment successful but order not found - still processing
