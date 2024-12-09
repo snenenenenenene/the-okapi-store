@@ -45,11 +45,14 @@ export async function POST(req: Request) {
       0
     );
 
-    // Add shipping if provided
-    const shippingAmount = shipping_rate
-      ? Math.round(shipping_rate.rate * 100)
-      : 0;
-    const totalAmount = subtotal + shippingAmount;
+    // Add shipping (fixed at 4.29)
+    const shippingAmount = 429; // €4.29 in cents
+
+    // Calculate VAT (23%) on subtotal + shipping
+    const vatAmount = Math.round((subtotal + shippingAmount) * 0.23);
+    
+    // Calculate total including VAT
+    const totalAmount = subtotal + shippingAmount + vatAmount;
 
     let paymentIntent;
 
@@ -57,6 +60,12 @@ export async function POST(req: Request) {
       // Update existing payment intent
       paymentIntent = await stripe.paymentIntents.update(paymentIntentId, {
         amount: totalAmount,
+        metadata: {
+          subtotal: subtotal,
+          shipping: shippingAmount,
+          vat: vatAmount,
+          items: JSON.stringify(items),
+        },
       });
     } else {
       // Create new payment intent
@@ -67,6 +76,9 @@ export async function POST(req: Request) {
           enabled: true,
         },
         metadata: {
+          subtotal: subtotal,
+          shipping: shippingAmount,
+          vat: vatAmount,
           items: JSON.stringify(items),
         },
       });

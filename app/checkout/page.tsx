@@ -241,20 +241,33 @@ function OrderSummary({
 	items: any[];
 	selectedRate?: ShippingRate | null;
 }) {
+	// Calculate base costs
 	const subtotal = items.reduce(
-		(sum, item) => sum + item.price * item.quantity,
+		(sum, item) => sum + (item.price || 0) * item.quantity,
 		0
 	);
-	const shipping = selectedRate ? Number(selectedRate.rate) : 0;
-	const vat = (subtotal + shipping) * 0.23; // Apply 23% VAT to both subtotal and shipping
-	const total = subtotal + shipping + vat;
+	const shipping = 4.29; // Fixed flat rate shipping
+	
+	// Calculate VAT (23%) on the subtotal and shipping
+	const vatAmount = (subtotal + shipping) * 0.23;
+	
+	// Calculate final total
+	const total = subtotal + shipping + vatAmount;
+
+	// Format delivery estimate
+	const deliveryDate = new Date();
+	deliveryDate.setDate(deliveryDate.getDate() + 7); // Estimate 7 days
+	const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-US', { 
+		month: 'short',
+		day: 'numeric'
+	});
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm p-6">
 			<h2 className="text-lg font-semibold mb-4">Order Summary</h2>
 			<div className="space-y-4">
 				{items.map((item) => (
-					<div key={item.id} className="flex items-center gap-4">
+					<div key={`${item.id}-${item.size}`} className="flex items-center gap-4">
 						<div className="relative w-16 h-16">
 							<Image
 								src={item.image}
@@ -266,11 +279,14 @@ function OrderSummary({
 						<div className="flex-1">
 							<p className="font-medium">{item.name}</p>
 							<p className="text-sm text-neutral-500">
+								Size: {item.size}
+							</p>
+							<p className="text-sm text-neutral-500">
 								Quantity: {item.quantity}
 							</p>
 						</div>
 						<p className="font-medium">
-							€{(item.price * item.quantity).toFixed(2)}
+							€{((item.price || 0) * item.quantity).toFixed(2)}
 						</p>
 					</div>
 				))}
@@ -280,15 +296,13 @@ function OrderSummary({
 						<span>Subtotal (excl. VAT)</span>
 						<span>€{subtotal.toFixed(2)}</span>
 					</div>
-					{selectedRate && (
-						<div className="flex justify-between text-sm">
-							<span>Shipping ({selectedRate.name})</span>
-							<span>€{Number(selectedRate.rate).toFixed(2)}</span>
-						</div>
-					)}
+					<div className="flex justify-between text-sm">
+						<span>Shipping (Flat Rate (Estimated delivery: {formattedDeliveryDate}))</span>
+						<span>€{shipping.toFixed(2)}</span>
+					</div>
 					<div className="flex justify-between text-sm">
 						<span>VAT (23%)</span>
-						<span>€{vat.toFixed(2)}</span>
+						<span>€{vatAmount.toFixed(2)}</span>
 					</div>
 					<div className="flex justify-between font-semibold text-lg pt-2 border-t">
 						<span>Total (incl. VAT)</span>

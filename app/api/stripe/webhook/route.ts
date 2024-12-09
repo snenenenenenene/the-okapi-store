@@ -67,167 +67,149 @@ export async function POST(req: Request) {
           throw new Error("No items found in metadata");
         }
 
-        // Try parsing the JSON string
-        try {
-          console.log("\nAttempting first JSON parse...");
-          cartItems = JSON.parse(itemsJson);
-          console.log("First parse result:", cartItems);
-        } catch (parseError) {
-          console.error("First parse failed:", parseError);
-          
-          // If first parse fails, try cleaning the string
-          console.log("\nAttempting to clean and parse JSON...");
-          const cleanJson = itemsJson.replace(/\\"/g, '"').replace(/^"/, '').replace(/"$/, '');
-          console.log("Cleaned JSON string:", cleanJson);
-          
-          cartItems = JSON.parse(cleanJson);
-          console.log("Second parse result:", cartItems);
-        }
+        // Parse the JSON string - it's already a valid JSON string, no need for cleaning
+        cartItems = JSON.parse(itemsJson);
+        console.log("Parsed cart items:", cartItems);
 
         // Validate cart items structure
-        console.log("\nValidating cart items:", {
-          isArray: Array.isArray(cartItems),
-          length: cartItems?.length,
-          firstItem: cartItems?.[0]
-        });
-
         if (!Array.isArray(cartItems) || cartItems.length === 0) {
           throw new Error("Invalid cart items format or empty cart");
         }
 
-        // Process cart items
-        cartItems = cartItems.map((item: any) => ({
-          ...item,
-          id: String(item.id),
-          variant_id: String(item.variant_id),
-        }));
+        // Process cart items - ensure all fields are present
+        cartItems = cartItems.map((item: any) => {
+          if (!item.id || !item.variant_id || !item.name || !item.price || !item.quantity) {
+            console.error("Invalid item format:", item);
+            throw new Error(`Invalid item format for item: ${JSON.stringify(item)}`);
+          }
+          return {
+            id: String(item.id),
+            variant_id: String(item.variant_id),
+            name: item.name,
+            price: parseFloat(String(item.price)),
+            quantity: parseInt(String(item.quantity)),
+            size: item.size || null,
+            image: item.image || null,
+          };
+        });
         
         console.log("\nProcessed cart items:", cartItems);
-
       } catch (error) {
         console.error("\n=== Cart Items Processing Error ===");
         console.error("Error details:", error);
-        console.error("Error name:", error.name);
         console.error("Error message:", error.message);
         console.error("Error stack:", error.stack);
-        throw new Error("No items found in the cart or invalid cart format");
+        throw error;
       }
 
-      // Create or get user
+      // Calculate prices as shown in checkout
+      const subtotal = cartItems.reduce(
+        (sum: number, item: any) => sum + (item.price * item.quantity),
+        0
+      );
+
+      const shippingCost = 4.29; // Flat rate shipping
+      const vatRate = 0.23; // 23% VAT rate
+      const vatAmount = (subtotal + shippingCost) * vatRate;
+      const total = subtotal + shippingCost + vatAmount;
+
+      // Convert to cents for Stripe comparison (same as in payment-intent)
+      const expectedAmount = Math.round(total * 100);
+
+      // Verify the payment amount matches what we expect
+      if (charge.amount !== expectedAmount) {
+        console.error("Payment amount mismatch", {
+          expected: expectedAmount,
+          received: charge.amount,
+          difference: charge.amount - expectedAmount,
+          breakdown: {
+            subtotal: Math.round(subtotal * 100),
+            shipping: Math.round(shippingCost * 100),
+            vat: Math.round(vatAmount * 100),
+          }
+        });
+      }
+
+      // Create or get user (just store the email, no need for full user account)
       const customerEmail = charge.billing_details.email;
       if (!customerEmail) {
         throw new Error("No customer email found in charge");
       }
 
-      const user = await prisma.user.upsert({
+      let user = await prisma.user.findUnique({
         where: { email: customerEmail },
-        update: {},
-        create: {
-          email: customerEmail,
-          name: charge.billing_details.name || "Customer",
-          role: "user",
-          credits: 0,
-        },
       });
 
-      // Check for existing order
-      const existingOrder = await prisma.order.findFirst({
-        where: {
-          stripePaymentId: paymentIntent.id,
-        },
-      });
-
-      if (existingOrder) {
-        console.log("Order already exists:", existingOrder);
-        
-        // If order exists but no Printful ID, create Printful order
-        if (!existingOrder.printfulId && existingOrder.status === 'pending') {
-          console.log("Creating Printful order for existing order...");
-          const printfulOrder = await createPrintfulOrder(
-            charge,
-            paymentIntent,
-            existingOrder
-          );
-          
-          // Update order with Printful ID and status
-          await prisma.order.update({
-            where: { id: existingOrder.id },
-            data: {
-              printfulId: printfulOrder?.id ? String(printfulOrder.id) : undefined,
-              status: printfulOrder?.id ? 'processing' : 'failed'
-            }
-          });
-        }
-        
-        return NextResponse.json({ received: true });
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email: customerEmail,
+            name: charge.billing_details.name || "Guest",
+            role: "user",
+          },
+        });
       }
 
-      // Create new order only if it doesn't exist
+      // Create new order with all price details
       const order = await prisma.order.create({
         data: {
           userId: user.id,
           status: "pending",
-          total: charge.amount / 100,
+          subtotal: subtotal,
+          shippingCost: shippingCost,
+          vatAmount: vatAmount,
+          total: total,
           stripePaymentId: paymentIntent.id,
+          shippingName: "Flat Rate (Estimated delivery: 5-7 business days)",
           orderItems: {
             create: cartItems.map((item: any) => ({
               quantity: item.quantity,
-              price: parseFloat(String(item.price)),
+              price: parseFloat(String(item.price)), // This is our selling price
+              name: item.name,
+              size: item.size,
               product: {
                 connectOrCreate: {
                   where: {
-                    id: String(item.id),
+                    id: String(item.id)
                   },
                   create: {
                     id: String(item.id),
                     name: item.name,
-                    description: item.name,
-                    price: parseFloat(String(item.price)),
-                    image: item.image,
-                  },
-                },
-              },
-            })),
+                    description: "",
+                    price: parseFloat(String(item.price)), // Store our selling price
+                    image: item.image || "",
+                  }
+                }
+              }
+            }))
           },
         },
         include: {
-          orderItems: {
-            include: {
-              product: true,
-            },
-          },
+          orderItems: true,
+          user: true,
         },
       });
 
       // Create Printful order
-      console.log("Creating Printful order for new order...");
+      console.log("Creating Printful order...");
       const printfulOrder = await createPrintfulOrder(
         charge,
         paymentIntent,
         order
       );
 
-      // Update order with Printful ID and status
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          printfulId: printfulOrder?.id ? String(printfulOrder.id) : undefined,
-          status: printfulOrder?.id ? 'processing' : 'failed'
-        }
-      });
-
-      console.log("Order created successfully:", order.id);
-
-      // Send confirmation email
-      if (customerEmail) {
-        await sendOrderConfirmationEmail(
-          customerEmail,
-          order.id,
-          order.orderItems,
-          order.total,
-          printfulOrder
-        );
+      if (printfulOrder?.id) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            printfulId: String(printfulOrder.id),
+            status: "processing",
+          },
+        });
       }
+
+      // Send confirmation email with the stored prices
+      await sendOrderConfirmationEmail(order);
 
       return NextResponse.json({
         received: true,

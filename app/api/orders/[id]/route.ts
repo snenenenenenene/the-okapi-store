@@ -62,7 +62,16 @@ async function fetchPrintfulOrder(orderId: string) {
         status: item.status || "pending",
         retail_price: item.retail_price,
       })),
-      costs: result[0].retail_costs || {
+      retail_costs: result[0].retail_costs || {
+        currency: "EUR",
+        subtotal: "0.00",
+        discount: "0.00",
+        shipping: "0.00",
+        tax: "0.00",
+        vat: "0.00",
+        total: "0.00"
+      },
+      costs: result[0].costs || {
         subtotal: "0.00",
         shipping: "0.00",
         tax: "0.00",

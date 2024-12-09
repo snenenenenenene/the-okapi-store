@@ -133,6 +133,40 @@ export async function createPrintfulOrder(
     })
   );
 
+  // Calculate costs
+  const amount = charge.amount / 100; // Convert from cents to dollars
+  const shipping = charge.shipping_cost ? charge.shipping_cost / 100 : 5.00;
+  
+  // Calculate VAT (23%) - this should match the calculation in the checkout page
+  const subtotalPlusShipping = amount / 1.23; // Remove VAT from total to get subtotal + shipping
+  const vat = amount - subtotalPlusShipping;
+  const subtotal = subtotalPlusShipping - shipping;
+  
+  // Get any discounts from metadata
+  const discount = charge.metadata?.discount ? parseFloat(charge.metadata.discount) : 0;
+
+  // For Printful's retail_costs (what customer sees)
+  const retailCosts = {
+    currency: charge.currency.toUpperCase(),
+    subtotal: subtotal.toFixed(2),
+    discount: discount.toFixed(2),
+    shipping: shipping.toFixed(2),
+    tax: "0.00", // We use VAT instead of tax
+    vat: vat.toFixed(2),
+    total: amount.toFixed(2)
+  };
+
+  // For Printful's costs (actual costs including your profit margin)
+  const printfulCosts = {
+    currency: charge.currency.toUpperCase(),
+    subtotal: (subtotal * 0.7).toFixed(2), // Remove your 30% profit margin
+    discount: discount.toFixed(2),
+    shipping: shipping.toFixed(2),
+    tax: "0.00",
+    vat: vat.toFixed(2),
+    total: ((subtotal * 0.7) + shipping + vat - discount).toFixed(2)
+  };
+
   const printfulOrderData = {
     external_id: paymentIntent.id,
     shipping: "STANDARD",
@@ -149,15 +183,11 @@ export async function createPrintfulOrder(
       country_code: shippingDetails.country || "",
       zip: shippingDetails.postal_code || "",
       email: charge.billing_details.email || paymentIntent.receipt_email || "",
+      phone: charge.shipping?.phone || paymentIntent.shipping?.phone || "",
     },
     items: printfulItems,
-    retail_costs: {
-      currency: charge.currency.toUpperCase(),
-      subtotal: (charge.amount / 100).toFixed(2),
-      discount: "0.00",
-      shipping: "5.00",
-      tax: "0.00",
-    },
+    retail_costs: retailCosts, // What customer sees
+    costs: printfulCosts, // Actual costs for Printful
   };
 
   console.log("=== Printful Order Data ===");

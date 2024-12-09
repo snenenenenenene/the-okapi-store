@@ -49,6 +49,15 @@ interface PrintfulDetails {
     status: string
     retail_price: string
   }>
+  retail_costs: {
+    currency: string
+    subtotal: string
+    discount: string
+    shipping: string
+    tax: string
+    vat: string | null
+    total: string
+  }
   costs: {
     subtotal: string
     shipping: string
@@ -70,6 +79,10 @@ interface Order {
   printfulId: string | null
   orderItems: OrderItem[]
   printfulDetails?: PrintfulDetails
+  subtotal: number
+  shippingCost: number
+  vatAmount: number
+  shippingName?: string
 }
 
 const statusMap = {
@@ -149,8 +162,6 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
       </div>
     )
   }
-
-  const StatusIcon = statusMap[order.status as keyof typeof statusMap]?.icon || Clock
 
   return (
     <div className="min-h-screen py-12 dark:bg-neutral-900">
@@ -278,21 +289,25 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           className="space-y-3 max-w-sm ml-auto"
         >
           <div className="flex justify-between text-sm">
-            <span className="text-neutral-600 dark:text-neutral-400">Subtotal</span>
+            <span className="text-neutral-600 dark:text-neutral-400">Subtotal (excl. VAT)</span>
             <motion.span whileHover={{ scale: 1.05 }}>
-              €{(order.total - (order.printfulDetails?.costs.shipping ? parseFloat(order.printfulDetails.costs.shipping) : 0)).toFixed(2)}
+              €{order.subtotal.toFixed(2)}
             </motion.span>
           </div>
-          {order.printfulDetails?.costs.shipping && (
-            <div className="flex justify-between text-sm">
-              <span className="text-neutral-600 dark:text-neutral-400">Shipping Fee</span>
-              <motion.span whileHover={{ scale: 1.05 }}>
-                €{parseFloat(order.printfulDetails.costs.shipping).toFixed(2)}
-              </motion.span>
-            </div>
-          )}
-          <div className="flex justify-between text-lg pt-3 border-t border-neutral-200 dark:border-neutral-800 font-medium">
-            <span>Total</span>
+          <div className="flex justify-between text-sm">
+            <span>Shipping{order.shippingName ? ` (${order.shippingName})` : ''}</span>
+            <motion.span whileHover={{ scale: 1.05 }}>
+              €{order.shippingCost.toFixed(2)}
+            </motion.span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>VAT (23%)</span>
+            <motion.span whileHover={{ scale: 1.05 }}>
+              €{order.vatAmount.toFixed(2)}
+            </motion.span>
+          </div>
+          <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+            <span>Total (incl. VAT)</span>
             <motion.span whileHover={{ scale: 1.05 }}>
               €{order.total.toFixed(2)}
             </motion.span>
@@ -309,7 +324,10 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           >
             <h2 className="text-xl font-medium">Shipping Information</h2>
             <div className="flex items-center gap-3 text-neutral-600 dark:text-neutral-400">
-              <StatusIcon className="h-5 w-5" />
+              {order.printfulDetails.status && (() => {
+                const StatusIcon = statusMap[order.printfulDetails.status.toLowerCase()]?.icon;
+                return StatusIcon ? <StatusIcon className="h-5 w-5" /> : null;
+              })()}
               <span>
                 {order.printfulDetails.status} - Estimated delivery: {' '}
                 {order.printfulDetails.estimated_delivery 

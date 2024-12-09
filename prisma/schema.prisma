@@ -69,13 +69,17 @@ model Order {
   id                String    @id @default(cuid())
   userId            String
   status            String    @default("processing")
-  total             Float
+  subtotal          Float     // Base price before VAT and shipping
+  shippingCost      Float     // Shipping cost
+  vatAmount         Float     // VAT amount
+  total             Float     // Final total including VAT and shipping
   stripeSessionId   String?   @unique
   stripePaymentId   String?   @unique
   printfulId        String?
   printfulStatus    String?
   trackingNumber    String?
   trackingUrl       String?
+  shippingName      String?   // Name of the shipping method chosen
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   
@@ -93,13 +97,14 @@ model OrderItem {
   orderId   String
   productId String
   quantity  Int
-  price     Float
-
+  price     Float   // Base price per item
+  name      String  // Item name as shown in checkout
+  size      String? // Size if applicable
+  
   order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
-  @@index([productId])
 }
 
 model OrderAssociation {
