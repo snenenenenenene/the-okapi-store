@@ -119,7 +119,7 @@ export async function POST(request: Request) {
             price: item.price
           }))
         }
-      },
+      } as any,
       include: {
         orderItems: {
           include: {
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
           }
         },
         user: true
-      }
+      } as any
     });
 
     // Return immediately without creating Printful order
