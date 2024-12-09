@@ -89,14 +89,14 @@ export const useCartStore = create<CartStore>()(
           }
 
           trackEvent.addToCart(item);
-          console.log("Adding item to cart:", item);
+          
 
           const existingItem = state.cart.find(
             (cartItem) => cartItem.variant_id === item.variant_id
           );
 
           if (existingItem) {
-            console.log("Updating existing item quantity");
+            
             return {
               cart: state.cart.map((cartItem) =>
                 cartItem.variant_id === item.variant_id
@@ -106,7 +106,7 @@ export const useCartStore = create<CartStore>()(
             };
           }
 
-          console.log("Adding new item to cart");
+          
           return {
             cart: [
               ...state.cart,
@@ -188,7 +188,7 @@ export const useCartStore = create<CartStore>()(
           }
 
           const { sessionId } = await response.json();
-          console.log("Created checkout session:", sessionId);
+          
 
           const { error } = await stripe.redirectToCheckout({ sessionId });
           if (error) {

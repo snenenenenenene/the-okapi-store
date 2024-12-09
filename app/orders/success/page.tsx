@@ -28,7 +28,7 @@ export default function OrderSuccessPage() {
         }
 
         const order = await response.json();
-        console.log('Found order:', order);
+        
 
         // Clear cart and checkout data
         clearCart();

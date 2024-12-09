@@ -53,7 +53,7 @@ export async function GET(
       })),
     };
 
-    console.log("Processed product data:", product);
+    
 
     return NextResponse.json(product);
   } catch (error) {

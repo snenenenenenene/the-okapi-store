@@ -66,7 +66,7 @@ export async function GET() {
 
     // Filter out any null results (failed fetches)
     const products = detailedProducts.filter((product) => product !== null);
-    console.log("Processed products:", products);
+    
 
     return NextResponse.json(products);
   } catch (error) {

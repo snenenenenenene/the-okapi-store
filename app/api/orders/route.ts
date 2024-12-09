@@ -17,7 +17,7 @@ export async function GET() {
       );
     }
 
-    console.log('Fetching orders for user email:', session.user.email);
+    
 
     // First, find the user
     const user = await prisma.user.findUnique({
@@ -25,11 +25,11 @@ export async function GET() {
     });
 
     if (!user) {
-      console.log('User not found');
+      
       return NextResponse.json({ orders: [] });
     }
 
-    console.log('Found user ID:', user.id);
+    
 
     // Get all orders where the user is either the owner or has an association
     const orders = await prisma.order.findMany({
@@ -63,10 +63,10 @@ export async function GET() {
       }
     });
 
-    console.log(`Found ${orders.length} orders for user ${user.id}`);
+    
     
     if (orders.length > 0) {
-      console.log('Sample order IDs:', orders.map(o => o.id));
+      
     }
 
     return NextResponse.json(orders);

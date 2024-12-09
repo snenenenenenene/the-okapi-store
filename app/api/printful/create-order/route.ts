@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       is_draft: true,
     };
 
-    console.log(
+    
       "Printful order data:",
       JSON.stringify(printfulOrderData, null, 2)
     );

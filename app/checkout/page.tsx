@@ -75,7 +75,7 @@ function useCheckoutFlow() {
 
 				setShippingAddress(formattedAddress);
 
-				console.log('Sending data to shipping calculation:', JSON.stringify({
+				
 					address: formattedAddress,
 					items: cart.map(item => ({
 						variant_id: item.variant_id,
@@ -107,7 +107,7 @@ function useCheckoutFlow() {
 				}
 
 				const rates = await response.json();
-				console.log('Received shipping rates:', rates);
+				
 
 				if (!Array.isArray(rates) || rates.length === 0) {
 					throw new Error('No shipping rates available for this address');
@@ -208,7 +208,7 @@ function useCheckoutFlow() {
 				}
 
 				const { orderId } = await orderResponse.json();
-				console.log('Order created successfully:', orderId);
+				
 
 				clearCart();
 				router.push(`/orders/${orderId}`);

@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   try {
-    console.log("=== Webhook Processing Started ===");
+    
     const payload = await req.text();
     const signature = req.headers.get("stripe-signature");
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         signature,
         process.env.STRIPE_WEBHOOK_SECRET!
       );
-      console.log("Event type:", event.type);
+      
     } catch (err: any) {
       console.error("Webhook signature verification failed:", err.message);
       return NextResponse.json(
@@ -36,10 +36,10 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "charge.succeeded") {
-      console.log("\n=== Processing Charge Succeeded Event ===");
+      
       const charge = event.data.object as Stripe.Charge;
       
-      console.log("\nCharge Metadata:", {
+      
         raw: charge.metadata,
         itemsType: typeof charge.metadata?.items,
         itemsLength: charge.metadata?.items?.length
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         charge.payment_intent as string
       );
       
-      console.log("\nPayment Intent Metadata:", {
+      
         raw: paymentIntent.metadata,
         itemsType: typeof paymentIntent.metadata?.items,
         itemsLength: paymentIntent.metadata?.items?.length
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       let cartItems;
       try {
         const itemsJson = charge.metadata?.items || paymentIntent.metadata?.items;
-        console.log("\nRaw items JSON:", itemsJson);
+        
         
         if (!itemsJson) {
           console.error("No items found in metadata");
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 
         // Parse the JSON string - it's already a valid JSON string, no need for cleaning
         cartItems = JSON.parse(itemsJson);
-        console.log("Parsed cart items:", cartItems);
+        
 
         // Validate cart items structure
         if (!Array.isArray(cartItems) || cartItems.length === 0) {
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
           };
         });
         
-        console.log("\nProcessed cart items:", cartItems);
+        
       } catch (error: any) {
         console.error("\n=== Cart Items Processing Error ===");
         console.error("Error details:", error);
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
       });
 
       // Create Printful order
-      console.log("Creating Printful order...");
+      
       const printfulOrder = await createPrintfulOrder(
         charge,
         paymentIntent,

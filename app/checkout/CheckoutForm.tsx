@@ -71,7 +71,7 @@ function CheckoutForm() {
 			}
 
 			const rates = await response.json();
-			console.log('Received shipping rates:', rates);
+			
 			setShippingRates(rates);
 
 			if (rates.length > 0) {
@@ -108,7 +108,7 @@ function CheckoutForm() {
 		if (rate.id === selectedRate?.id) return;
 
 		setSelectedRate(rate);
-		console.log('Updating payment intent with new shipping rate:', rate);
+		
 
 		const result = await updatePaymentIntent(cart, rate, paymentIntentId);
 		if (result?.paymentIntentId) {
@@ -120,7 +120,7 @@ function CheckoutForm() {
 		e.preventDefault();
 
 		if (submitAttempted.current) {
-			console.log('Preventing duplicate submission');
+			
 			return;
 		}
 

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     const session: any = await getServerSession(authOptions);
     const { items } = await req.json();
 
-    console.log("Creating checkout session with items:", JSON.stringify(items, null, 2));
+    
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
     if (!baseUrl) {
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
       customer_email: session?.user?.email,
     });
 
-    console.log("Checkout session created:", {
+    
       id: checkoutSession.id,
       successUrl: checkoutSession.success_url,
       cancelUrl: checkoutSession.cancel_url

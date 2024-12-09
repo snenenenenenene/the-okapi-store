@@ -105,7 +105,7 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
         throw new Error('Order not found')
       }
       const data = await response.json()
-      console.log('Fetched order data:', data)
+      
       setOrder(data)
     }
     setLoading(false)

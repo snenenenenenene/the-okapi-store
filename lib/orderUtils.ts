@@ -31,7 +31,7 @@ export async function mergeGuestOrders(guestEmail: string, userEmail: string) {
       where: { id: guestUser.id }
     });
 
-    console.log(`Merged orders from ${guestEmail} to ${userEmail}`);
+    
   } catch (error) {
     console.error('Error merging guest orders:', error);
     throw error;

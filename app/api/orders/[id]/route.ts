@@ -15,8 +15,8 @@ async function fetchPrintfulOrder(orderId: string) {
     printfulId = `#${printfulId}`;
   }
 
-  console.log("Fetching Printful order with ID:", printfulId);
-  console.log("Full URL:", `${PRINTFUL_API_URL}/orders/${printfulId}`);
+  
+  
 
   try {
     const response = await fetch(`${PRINTFUL_API_URL}/orders/${printfulId}`, {
@@ -32,10 +32,10 @@ async function fetchPrintfulOrder(orderId: string) {
     }
 
     const data = await response.json();
-    console.log("Printful API Response:", JSON.stringify(data, null, 2));
+    
 
     if (!data.result) {
-      console.log("No result in Printful response");
+      
       return null;
     }
 
@@ -101,7 +101,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    console.log("Fetching order:", params.id);
+    
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
@@ -124,15 +124,15 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    console.log("Found Prisma order:", JSON.stringify(order, null, 2));
+    
 
     let printfulDetails = null;
     if (order.stripePaymentId) {
-      console.log("Using Stripe Payment ID:", order.stripePaymentId);
+      
       printfulDetails = await fetchPrintfulOrder(order.stripePaymentId);
     }
 
-    console.log("Final Printful details:", JSON.stringify(printfulDetails));
+    
 
     return NextResponse.json({
       ...order,

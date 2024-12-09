@@ -148,7 +148,7 @@ export const sendOrderConfirmationEmail = async (order: any) => {
       subject: `Order Confirmation - The Okapi Store #${id}`,
       html: template,
     })
-    console.log('Order confirmation email sent successfully')
+    
   } catch (error) {
     console.error('Error sending order confirmation email:', error)
     throw error

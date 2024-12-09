@@ -27,7 +27,7 @@ function usePaymentIntentHandler() {
       return new Promise((resolve) => {
         timeoutRef.current = setTimeout(async () => {
           try {
-            console.log("Updating payment intent with:", {
+            
               cart,
               shippingRate,
               paymentIntentId,
@@ -56,7 +56,7 @@ function usePaymentIntentHandler() {
             }
 
             const data = await response.json();
-            console.log("Payment intent updated:", data);
+            
             resolve(data);
           } catch (error) {
             console.error("Payment intent update error:", error);

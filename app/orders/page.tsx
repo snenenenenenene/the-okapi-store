@@ -68,7 +68,7 @@ export default function OrdersPage() {
           throw new Error('Failed to fetch orders')
         }
         const data = await response.json()
-        console.log('Fetched orders:', data)
+        
         setOrders(data)
       } catch (err) {
         console.error('Error fetching orders:', err)

@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const { address, items } = await req.json();
 
-    console.log("Received shipping request:", { address, items });
+    
 
     if (!PRINTFUL_TOKEN) {
       throw new Error("Printful API key is not configured");
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       quantity: item.quantity,
     }));
 
-    console.log("Formatted items for Printful:", printfulItems);
+    
 
     const requestBody = {
       recipient: {
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       currency: "EUR",
     };
 
-    console.log("Sending to Printful:", JSON.stringify(requestBody, null, 2));
+    
 
     const response = await fetch(`${PRINTFUL_API_URL}/shipping/rates`, {
       method: "POST",
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     });
 
     const responseData = await response.json();
-    console.log("Printful response:", JSON.stringify(responseData, null, 2));
+    
 
     if (!response.ok) {
       throw new Error(

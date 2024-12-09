@@ -13,7 +13,7 @@ function CheckoutSuccessContent() {
 	useEffect(() => {
 		const fetchOrderId = async () => {
 			const paymentIntentId = searchParams.get('payment_intent');
-			console.log('Payment Intent ID:', paymentIntentId);
+			
 
 			if (!paymentIntentId) {
 				setError('No payment intent ID found');
@@ -22,7 +22,7 @@ function CheckoutSuccessContent() {
 
 			try {
 				clearCart();
-				console.log('Fetching order for payment intent:', paymentIntentId);
+				
 
 				const response = await fetch(`/api/orders/lookup`, {
 					method: 'POST',
@@ -34,12 +34,12 @@ function CheckoutSuccessContent() {
 					}),
 				});
 
-				console.log('Response status:', response.status);
+				
 				const data = await response.json();
-				console.log('Response data:', data);
+				
 
 				if (data.order?.id) {
-					console.log('Redirecting to order:', data.order.id);
+					
 					router.replace(`/orders/${data.order.id}`);
 				} else {
 					setError('Order not found in response');

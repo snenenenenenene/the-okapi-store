@@ -13,7 +13,7 @@ interface CartItem {
 }
 
 async function fetchPrintfulProduct(productId: string | number) {
-  console.log("Fetching Printful product:", productId);
+  
 
   const response = await fetch(
     `${PRINTFUL_API_URL}/store/products/${productId}`,
@@ -30,7 +30,7 @@ async function fetchPrintfulProduct(productId: string | number) {
   }
 
   const data = await response.json();
-  console.log("Printful product data:", JSON.stringify(data.result, null, 2));
+  
   return data.result;
 }
 
@@ -64,7 +64,7 @@ async function validateAndGetPrintfulVariant(
 
   // Check availability
   if (variant.availability_status !== "active") {
-    console.log("Variant not available:", variant);
+    
     throw new Error(`Product variant ${variant.id} is not available`);
   }
 
@@ -87,8 +87,8 @@ export async function createPrintfulOrder(
   paymentIntent: Stripe.PaymentIntent,
   session?: Stripe.Checkout.Session | null
 ) {
-  console.log("=== Starting Printful Order Creation ===");
-  console.log("Charge:", JSON.stringify(charge, null, 2));
+  
+  
 
   const shippingDetails =
     charge.shipping?.address ||
@@ -106,7 +106,7 @@ export async function createPrintfulOrder(
       paymentIntent.metadata?.items ||
       session?.metadata?.items;
     cartItems = JSON.parse(metadataItems || "[]");
-    console.log("Parsed cart items:", cartItems);
+    
   } catch (error) {
     console.error("Error parsing cart items:", error);
     throw new Error("Failed to parse cart items");
@@ -119,7 +119,7 @@ export async function createPrintfulOrder(
   // Validate and get Printful variants for each item
   const printfulItems = await Promise.all(
     cartItems.map(async (item) => {
-      console.log("Validating item:", item);
+      
       const validatedVariant = await validateAndGetPrintfulVariant(
         item.id,
         item
@@ -190,8 +190,8 @@ export async function createPrintfulOrder(
     costs: printfulCosts, // Actual costs for Printful
   };
 
-  console.log("=== Printful Order Data ===");
-  console.log(JSON.stringify(printfulOrderData, null, 2));
+  
+  
 
   // Create the order
   const response = await fetch(`${PRINTFUL_API_URL}/orders`, {
@@ -204,7 +204,7 @@ export async function createPrintfulOrder(
   });
 
   const responseData = await response.json();
-  console.log("Printful API Response:", JSON.stringify(responseData, null, 2));
+  
 
   if (!response.ok) {
     console.error("Failed to create Printful order:", responseData);
