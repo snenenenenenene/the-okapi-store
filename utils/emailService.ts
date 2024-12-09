@@ -35,95 +35,110 @@ export const sendOrderConfirmationEmail = async (order: any) => {
     .map(
       (item: any) => `
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.size || ''}</td>
-          <td style="padding: 10px; border-bottom: 1px; text-align: center;">${item.quantity}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">€${(item.price * item.quantity).toFixed(2)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">
+            <img src="${item.image}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover;">
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">
+            ${item.name}
+            <br>
+            <small>Size: ${item.size}</small>
+            <br>
+            <a href="${process.env.NEXT_PUBLIC_BASE_URL}/review/${order.id}/${item.id}/${item.variant_id}" style="color: #4F46E5; text-decoration: none;">
+              Write a Review
+            </a>
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">
+            ${item.quantity}x
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">
+            €${item.price.toFixed(2)}
+          </td>
         </tr>
       `
     )
     .join("");
 
   const template = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1 style="color: #333;">Thank you for your order!</h1>
-      <p>Your order #${id} has been received and is being processed.</p>
-      
-      <div style="margin: 20px 0;">
-        <a href="${process.env.NEXT_PUBLIC_BASE_URL}/orders/${id}" 
-           style="background-color: #8D6E63; 
-                  color: white; 
-                  padding: 12px 25px; 
-                  text-decoration: none; 
-                  border-radius: 5px;
-                  font-weight: bold;
-                  display: inline-block;
-                  margin-right: 10px;">
-          View Order
-        </a>
-        <a href="mailto:?subject=Check%20out%20my%20Okapi%20Store%20order!&body=You%20can%20view%20my%20order%20here%3A%20${encodeURIComponent(`${process.env.NEXT_PUBLIC_BASE_URL}/orders/${id}`)}" 
-           style="background-color: #A5D6A7; 
-                  color: white; 
-                  padding: 12px 25px; 
-                  text-decoration: none; 
-                  border-radius: 5px;
-                  font-weight: bold;
-                  display: inline-block;">
-          Share Order
-        </a>
-      </div>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .order-details { margin-bottom: 30px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { text-align: left; padding: 10px; background: #f8f8f8; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+          .review-cta { 
+            background: #4F46E5;
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Order Confirmation</h1>
+            <p>Thank you for your order!</p>
+          </div>
+          
+          <div class="order-details">
+            <h2>Order #${id}</h2>
+            <p>Order Date: ${new Date(order.createdAt).toLocaleDateString()}</p>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Product</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" style="text-align: right; padding: 10px;"><strong>Subtotal:</strong></td>
+                  <td style="padding: 10px;">€${subtotal.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" style="text-align: right; padding: 10px;"><strong>Shipping${shippingName ? ` (${shippingName})` : ''}:</strong></td>
+                  <td style="padding: 10px;">€${shippingCost.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" style="text-align: right; padding: 10px;"><strong>VAT (23%):</strong></td>
+                  <td style="padding: 10px;">€${vatAmount.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" style="text-align: right; padding: 10px;"><strong>Total:</strong></td>
+                  <td style="padding: 10px;"><strong>€${total.toFixed(2)}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <p>Once you receive your items, we'd love to hear your thoughts!</p>
+            <a href="${process.env.NEXT_PUBLIC_BASE_URL}/orders/${id}" class="review-cta">
+              View Order & Write Reviews
+            </a>
+          </div>
 
-      <h2 style="color: #333;">Order Summary:</h2>
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="background-color: #f8f8f8;">
-            <th style="padding: 10px; text-align: left;">Item</th>
-            <th style="padding: 10px; text-align: left;">Size</th>
-            <th style="padding: 10px; text-align: center;">Qty</th>
-            <th style="padding: 10px; text-align: right;">Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="padding: 10px; text-align: right;"><strong>Subtotal:</strong></td>
-            <td style="padding: 10px;">€${subtotal.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colspan="3" style="padding: 10px; text-align: right;"><strong>Shipping${shippingName ? ` (${shippingName})` : ''}:</strong></td>
-            <td style="padding: 10px;">€${shippingCost.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colspan="3" style="padding: 10px; text-align: right;"><strong>VAT (23%):</strong></td>
-            <td style="padding: 10px;">€${vatAmount.toFixed(2)}</td>
-          </tr>
-          <tr style="background-color: #f8f8f8;">
-            <td colspan="3" style="padding: 10px; text-align: right;"><strong>Total:</strong></td>
-            <td style="padding: 10px;"><strong>€${total.toFixed(2)}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div style="margin: 20px 0; padding: 20px; background-color: #f8f8f8; border-radius: 5px;">
-        <h3 style="color: #333; margin-top: 0;">Shipping Information</h3>
-        <p>Your order will be carefully packaged and shipped within 2-3 business days.</p>
-      </div>
-
-      <div style="margin-top: 20px; color: #666;">
-        <p>Questions about your order? Contact us at:</p>
-        <p><a href="mailto:theokapistore@gmail.com" style="color: #8D6E63;">theokapistore@gmail.com</a></p>
-      </div>
-
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #EEE; text-align: center;">
-        <p style="color: #8D6E63; font-size: 12px;">
-          The Okapi Store<br>
-          Your favorite Okapi-themed shop<br><br>
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL}" style="color: #8D6E63; text-decoration: none;">Visit our store</a>
-        </p>
-      </div>
-    </div>
+          <div class="footer">
+            <p>Thank you for shopping with us!</p>
+            <small>If you have any questions, please contact our support team.</small>
+          </div>
+        </div>
+      </body>
+    </html>
   `
 
   try {

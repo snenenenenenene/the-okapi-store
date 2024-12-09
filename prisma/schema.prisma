@@ -60,6 +60,7 @@ model User {
   sessions           Session[]
   orders             Order[]
   orderAssociations  OrderAssociation[]
+  reviews            Review[]
   createdAt          DateTime  @default(now())
 
   @@index([email])
@@ -86,6 +87,7 @@ model Order {
   user              User      @relation(fields: [userId], references: [id])
   orderItems        OrderItem[]
   associations      OrderAssociation[]
+  reviews           Review[]
 
   @@index([userId])
   @@index([stripeSessionId])
@@ -131,6 +133,26 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orderItems  OrderItem[]
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  rating      Int      @db.SmallInt
+  title       String?
+  content     String
+  productId   String
+  variantId   String
+  orderId     String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([userId])
+  @@index([orderId])
 }
 
 model VerificationToken {

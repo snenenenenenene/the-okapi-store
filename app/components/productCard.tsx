@@ -71,9 +71,14 @@ export function ProductCard({ product }: ProductCardProps) {
         <h3 className="text-lg font-medium text-sandstone-900 dark:text-slate-50">
           {product.name}
         </h3>
-        <p className="text-sm text-sandstone-600 dark:text-slate-300">
-          {formatEuroPrice(product.price)}
-        </p>
+        <div className="flex items-baseline gap-2">
+          <p className="text-base font-medium text-sandstone-900 dark:text-slate-50">
+            {formatEuroPrice(product.retail_price)}
+          </p>
+          <p className="text-sm text-sandstone-500 dark:text-slate-400">
+            Excl. VAT
+          </p>
+        </div>
       </div>
 
       <Link

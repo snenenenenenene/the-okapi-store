@@ -25,8 +25,6 @@ export async function GET(
     const json = await response.json();
     const product_data = json.result;
 
-    console.log("Fetched product data from Printful:", product_data);
-
     const product = {
       id: product_data.sync_product.id,
       name: product_data.sync_product.name,

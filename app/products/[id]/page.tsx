@@ -7,6 +7,7 @@ import { ChevronDown, Loader2, Ruler, ShoppingBag, Truck, X } from "lucide-react
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import * as Accordion from '@radix-ui/react-accordion';
+import { Dialog, DialogContent, DialogHeader, DialogDescription, DialogTitle } from '@/components/Dialog';
 
 interface Variant {
   id: number;
@@ -31,18 +32,25 @@ interface PrintfulProduct {
 }
 
 interface SizeGuide {
-  size: string;
-  chest: string;
-  length: string;
-  shoulders: string;
+  product_id: number;
+  available_sizes: string[];
+  size_tables: {
+    type: 'measure_yourself' | 'product_measure' | 'international';
+    unit: string;
+    description: string;
+    image_url?: string;
+    image_description?: string;
+    measurements: {
+      type_label: string;
+      values: Array<{
+        size: string;
+        value?: string;
+        min_value?: string;
+        max_value?: string;
+      }>;
+    }[];
+  }[];
 }
-
-const sizeGuide: SizeGuide[] = [
-  { size: "S", chest: "36-38", length: "27", shoulders: "17" },
-  { size: "M", chest: "38-40", length: "28", shoulders: "18" },
-  { size: "L", chest: "40-42", length: "29", shoulders: "19" },
-  { size: "XL", chest: "42-44", length: "30", shoulders: "20" },
-];
 
 export default function ProductDetail({ params }: { params: { id: string } }) {
   const id = params.id;
@@ -51,6 +59,8 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
   const [hoveredSize, setHoveredSize] = useState<number | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [sizeGuide, setSizeGuide] = useState<SizeGuide | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<string>('cm');
   const [isHovered, setIsHovered] = useState(false);
   const sizePickerRef = useRef<HTMLDivElement>(null);
   const [sizeButtonPositions, setSizeButtonPositions] = useState<{ [key: number]: { x: number, y: number } }>({});
@@ -78,6 +88,13 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
         if (response.ok) {
           const data = await response.json();
           setProduct(data);
+          // Find the first available variant
+          const firstAvailableVariant = data.variants.find(
+            (variant: Variant) => variant.availability_status === 'active'
+          );
+          if (firstAvailableVariant) {
+            setSelectedVariant(firstAvailableVariant);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch product:", error);
@@ -86,6 +103,27 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
 
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    const fetchSizeGuide = async () => {
+      try {
+        // Use the product ID directly for size guide
+        const response = await fetch(`/api/printful/products/${product?.id}/sizes?unit=${selectedUnit}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSizeGuide(data);
+        } else if (response.status === 404) {
+          console.log("Size guide not available for this product");
+        }
+      } catch (error) {
+        console.error("Failed to fetch size guide:", error);
+      }
+    };
+
+    if (product?.id) {
+      fetchSizeGuide();
+    }
+  }, [product?.id, selectedUnit]);
 
   useEffect(() => {
     const updateButtonPositions = () => {
@@ -176,29 +214,130 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
         {/* Product Details */}
         <div className="space-y-10">
           {/* Title and Price */}
-          <div className="space-y-4">
-            <h1 className="text-4xl font-medium tracking-tight text-sandstone-900 dark:text-slate-50">
-              {product?.name}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-sandstone-900 dark:text-slate-50">
+              {product.name}
             </h1>
-            <div className="flex items-baseline gap-x-2">
-              <p className="text-2xl font-medium text-sandstone-900 dark:text-slate-50">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-sandstone-900 dark:text-slate-50">
                 {selectedVariant ? formatEuroPrice(parseFloat(selectedVariant.price)) : ''}
-              </p>
+              </span>
             </div>
+          </div>
+
+          {/* Product Features */}
+          <div className="space-y-2">
+            <ul className="space-y-2 text-sandstone-700 dark:text-slate-300">
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-sandstone-400 dark:bg-slate-500" />
+                {product.description}
+              </li>
+            </ul>
+          </div>
+
+          {/* Model Info */}
+          <div className="space-y-1 text-sm text-sandstone-600 dark:text-slate-400">
+            <p>Narrows is 180cm (5'9") and wears a Size L</p>
+            <p>Hayley is 155cm (5'1") and wears a Size S</p>
           </div>
 
           {/* Size Selection */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-sandstone-900 dark:text-slate-50">Size</span>
+              <label className="text-lg font-medium text-sandstone-900 dark:text-slate-50">
+                SIZE: {selectedVariant?.size || 'Select Size'}
+              </label>
               <button
-                onClick={() => setShowSizeGuide(true)}
-                className="text-sm text-sandstone-500 underline hover:text-sandstone-900 dark:text-slate-400 dark:hover:text-slate-50"
+                onClick={() => setShowSizeGuide(!showSizeGuide)}
+                className="text-sm font-medium text-sandstone-600 hover:text-sandstone-900 dark:text-slate-400 dark:hover:text-slate-50 flex items-center gap-1"
               >
                 Size Guide
+                <ChevronDown className={`h-4 w-4 transition-transform ${showSizeGuide ? 'rotate-180' : ''}`} />
               </button>
             </div>
-            <div className="flex gap-4" ref={sizePickerRef}>
+
+            {showSizeGuide && sizeGuide && (
+              <div className="mt-8">
+                <h3 className="text-lg font-medium">Size Guide</h3>
+                
+                {/* Unit Toggle */}
+                <div className="flex gap-4 mt-2 mb-4">
+                  <button
+                    className={`px-3 py-1 rounded ${selectedUnit === 'cm' ? 'bg-gray-200' : ''}`}
+                    onClick={() => setSelectedUnit('cm')}
+                  >
+                    CM
+                  </button>
+                  <button
+                    className={`px-3 py-1 rounded ${selectedUnit === 'inches' ? 'bg-gray-200' : ''}`}
+                    onClick={() => setSelectedUnit('inches')}
+                  >
+                    Inches
+                  </button>
+                </div>
+
+                {/* Size Tables */}
+                {sizeGuide.size_tables.map((table, tableIndex) => (
+                  <div key={tableIndex} className="mb-8">
+                    <h4 className="font-medium mb-2 capitalize">{table.type.replace('_', ' ')}</h4>
+                    
+                    {table.description && (
+                      <div className="text-sm text-gray-600 mb-4" 
+                           dangerouslySetInnerHTML={{ __html: table.description }} 
+                      />
+                    )}
+                    
+                    {/* Measurement Table */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead>
+                          <tr>
+                            <th className="px-4 py-2 bg-gray-50">Measurement</th>
+                            {sizeGuide.available_sizes.map(size => (
+                              <th key={size} className="px-4 py-2 bg-gray-50">{size}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {table.measurements.map((measurement, measurementIndex) => (
+                            <tr key={measurementIndex}>
+                              <td className="px-4 py-2 font-medium">{measurement.type_label}</td>
+                              {measurement.values.map((value, valueIndex) => (
+                                <td key={valueIndex} className="px-4 py-2">
+                                  {value.value ? 
+                                    value.value : 
+                                    `${value.min_value} - ${value.max_value}`}
+                                  {table.unit !== 'none' && ` ${table.unit}`}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Measurement Guide Image */}
+                    {table.image_url && (
+                      <div className="mt-4">
+                        <img 
+                          src={table.image_url} 
+                          alt="Measurement guide" 
+                          className="max-w-full h-auto"
+                        />
+                        {table.image_description && (
+                          <div 
+                            className="text-sm text-gray-600 mt-2"
+                            dangerouslySetInnerHTML={{ __html: table.image_description }}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2" ref={sizePickerRef}>
               <AnimatePresence>
                 {selectedVariant && (
                   <motion.div
@@ -225,14 +364,17 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
                   onMouseEnter={() => setHoveredSize(index)}
                   onMouseLeave={() => setHoveredSize(null)}
                   disabled={variant.availability_status !== 'active'}
-                  className={`size-button relative h-12 w-12 rounded-full text-base font-medium transition-colors ${variant.availability_status !== 'active'
+                  className={`relative h-12 w-12 rounded-full text-base font-medium transition-colors ${
+                    variant.availability_status !== 'active'
                       ? "cursor-not-allowed opacity-50"
                       : selectedVariant?.id === variant.id
-                        ? "text-sandstone-900 dark:text-slate-50"
-                        : "text-sandstone-500 hover:text-sandstone-900 dark:text-slate-400 dark:hover:text-slate-50"
-                    }`}
+                        ? "bg-sandstone-900 text-white dark:bg-slate-50 dark:text-slate-900"
+                        : "text-sandstone-900 hover:bg-sandstone-100 dark:text-slate-50 dark:hover:bg-slate-800"
+                  }`}
                 >
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 leading-none">{variant.size}</span>
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 leading-none">
+                    {variant.size}
+                  </span>
                   {variant.availability_status !== 'active' && (
                     <span className="absolute -bottom-6 text-xs text-sandstone-500 dark:text-slate-400">
                       Sold Out
@@ -247,7 +389,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           <button
             onClick={() => {
               if (selectedVariant && product) {
-
                 const cartItem = {
                   id: String(product.id),
                   variant_id: selectedVariant.id,
@@ -257,9 +398,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
                   image: selectedVariant.previewUrl,
                   size: selectedVariant.size
                 };
-
                 addToCart(cartItem);
-
               }
             }}
             disabled={!selectedVariant || selectedVariant.availability_status !== 'active'}
@@ -276,47 +415,93 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           {/* Product Info */}
           <div className="space-y-6 pt-10">
             <Accordion.Root type="single" collapsible className="space-y-6">
-              <Accordion.Item value="description" className="overflow-hidden">
+              <Accordion.Item value="size-guide" className="overflow-hidden">
                 <Accordion.Trigger className="group flex w-full items-center justify-between py-4 text-left text-lg font-medium text-sandstone-900 transition-colors hover:text-sandstone-600 dark:text-slate-50 dark:hover:text-slate-300">
-                  Product Details
+                  Size Guide
                   <ChevronDown className="h-5 w-5 transform transition-transform duration-200 ease-in-out group-data-[state=open]:rotate-180" />
                 </Accordion.Trigger>
                 <Accordion.Content className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
                   <div className="pb-6 pt-4">
-                    <div className="prose prose-sandstone dark:prose-invert">
-                      <p className="text-sandstone-600 dark:text-slate-400">
-                        {product?.description}
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sandstone-600 dark:text-slate-400">
-                        <li>• 100% organic cotton</li>
-                        <li>• Relaxed fit</li>
-                        <li>• Machine washable</li>
-                        <li>• Made in Portugal</li>
-                      </ul>
-                    </div>
-                  </div>
-                </Accordion.Content>
-              </Accordion.Item>
-
-              <Accordion.Item value="shipping" className="overflow-hidden">
-                <Accordion.Trigger className="group flex w-full items-center justify-between py-4 text-left text-lg font-medium text-sandstone-900 transition-colors hover:text-sandstone-600 dark:text-slate-50 dark:hover:text-slate-300">
-                  Shipping & Returns
-                  <ChevronDown className="h-5 w-5 transform transition-transform duration-200 ease-in-out group-data-[state=open]:rotate-180" />
-                </Accordion.Trigger>
-                <Accordion.Content className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                  <div className="pb-6 pt-4">
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-x-4">
-                        <Truck className="h-6 w-6 text-sandstone-900 dark:text-slate-50" />
-                        <div>
-                          <p className="font-medium text-sandstone-900 dark:text-slate-50">Free Shipping</p>
-                          <p className="text-sm text-sandstone-600 dark:text-slate-400">2-5 business days</p>
+                    {sizeGuide && (
+                      <div className="mt-8">
+                        <h3 className="text-lg font-medium">Size Guide</h3>
+                        
+                        {/* Unit Toggle */}
+                        <div className="flex gap-4 mt-2 mb-4">
+                          <button
+                            className={`px-3 py-1 rounded ${selectedUnit === 'cm' ? 'bg-gray-200' : ''}`}
+                            onClick={() => setSelectedUnit('cm')}
+                          >
+                            CM
+                          </button>
+                          <button
+                            className={`px-3 py-1 rounded ${selectedUnit === 'inches' ? 'bg-gray-200' : ''}`}
+                            onClick={() => setSelectedUnit('inches')}
+                          >
+                            Inches
+                          </button>
                         </div>
+
+                        {/* Size Tables */}
+                        {sizeGuide.size_tables.map((table, tableIndex) => (
+                          <div key={tableIndex} className="mb-8">
+                            <h4 className="font-medium mb-2 capitalize">{table.type.replace('_', ' ')}</h4>
+                            
+                            {table.description && (
+                              <div className="text-sm text-gray-600 mb-4" 
+                                   dangerouslySetInnerHTML={{ __html: table.description }} 
+                              />
+                            )}
+                            
+                            {/* Measurement Table */}
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                  <tr>
+                                    <th className="px-4 py-2 bg-gray-50">Measurement</th>
+                                    {sizeGuide.available_sizes.map(size => (
+                                      <th key={size} className="px-4 py-2 bg-gray-50">{size}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                  {table.measurements.map((measurement, measurementIndex) => (
+                                    <tr key={measurementIndex}>
+                                      <td className="px-4 py-2 font-medium">{measurement.type_label}</td>
+                                      {measurement.values.map((value, valueIndex) => (
+                                        <td key={valueIndex} className="px-4 py-2">
+                                          {value.value ? 
+                                            value.value : 
+                                            `${value.min_value} - ${value.max_value}`}
+                                          {table.unit !== 'none' && ` ${table.unit}`}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Measurement Guide Image */}
+                            {table.image_url && (
+                              <div className="mt-4">
+                                <img 
+                                  src={table.image_url} 
+                                  alt="Measurement guide" 
+                                  className="max-w-full h-auto"
+                                />
+                                {table.image_description && (
+                                  <div 
+                                    className="text-sm text-gray-600 mt-2"
+                                    dangerouslySetInnerHTML={{ __html: table.image_description }}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm text-sandstone-600 dark:text-slate-400">
-                        Free returns within 30 days. See our <a href="/returns" className="underline hover:text-sandstone-900 dark:hover:text-slate-50">return policy</a> for more details.
-                      </p>
-                    </div>
+                    )}
                   </div>
                 </Accordion.Content>
               </Accordion.Item>
@@ -324,64 +509,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           </div>
         </div>
       </div>
-
-      {/* Size Guide Modal */}
-      <AnimatePresence>
-        {showSizeGuide && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowSizeGuide(false)}
-              className="fixed inset-0 z-40 bg-black"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] overflow-y-auto bg-white p-6 shadow-lg dark:bg-slate-900 sm:rounded-lg"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-medium text-sandstone-900 dark:text-slate-50">
-                  Size Guide
-                </h3>
-                <button
-                  onClick={() => setShowSizeGuide(false)}
-                  className="text-sandstone-500 hover:text-sandstone-900 dark:text-slate-400 dark:hover:text-slate-50"
-                >
-                  <span className="sr-only">Close</span>
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center gap-x-2 text-sm text-sandstone-600 dark:text-slate-400">
-                  <Ruler className="h-4 w-4" />
-                  <span>Measurements in inches</span>
-                </div>
-                <table className="w-full text-left">
-                  <thead>
-                    <tr>
-                      <th className="py-2 text-sm font-medium text-sandstone-900 dark:text-slate-50">Size</th>
-                      <th className="py-2 text-sm font-medium text-sandstone-900 dark:text-slate-50">Chest</th>
-                      <th className="py-2 text-sm font-medium text-sandstone-900 dark:text-slate-50">Length</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-sandstone-100 dark:divide-slate-800">
-                    {sizeGuide.map((size) => (
-                      <tr key={size.size}>
-                        <td className="py-2 text-sm text-sandstone-600 dark:text-slate-400">{size.size}</td>
-                        <td className="py-2 text-sm text-sandstone-600 dark:text-slate-400">{size.chest}"</td>
-                        <td className="py-2 text-sm text-sandstone-600 dark:text-slate-400">{size.length}"</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

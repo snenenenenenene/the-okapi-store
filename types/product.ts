@@ -5,6 +5,7 @@ export interface Product {
   description: string;
   image: string;
   price: number;
+  retail_price: number;
   variants: Variant[];
 }
 
