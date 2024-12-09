@@ -56,9 +56,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [hoveredSize, setHoveredSize] = useState<number | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
-  const [showSizeGuide, setShowSizeGuide] = useState(false);
-  const [sizeGuide, setSizeGuide] = useState<SizeGuide | null>(null);
-  const [selectedUnit, setSelectedUnit] = useState<string>('cm');
   const [isHovered, setIsHovered] = useState(false);
   const sizePickerRef = useRef<HTMLDivElement>(null);
   const [sizeButtonPositions, setSizeButtonPositions] = useState<{ [key: number]: { x: number, y: number } }>({});
@@ -135,8 +132,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
 
     return sizeButtonPositions[index as any] || { x: 0, y: 0 };
   };
-
-  console.log("Product:", product);
 
   if (!product) {
     return (
