@@ -135,7 +135,7 @@ export async function createPrintfulOrder(
 
   // Calculate costs
   const amount = charge.amount / 100; // Convert from cents to dollars
-  const shipping = charge.shipping_cost ? charge.shipping_cost / 100 : 5.00;
+  const shipping = (charge as any).shipping_cost ? (charge as any).shipping_cost / 100 : 5.00;
   
   // Calculate VAT (23%) - this should match the calculation in the checkout page
   const subtotalPlusShipping = amount / 1.23; // Remove VAT from total to get subtotal + shipping

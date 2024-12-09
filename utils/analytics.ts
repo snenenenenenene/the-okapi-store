@@ -15,7 +15,7 @@ export const trackEvent = {
     const { analytics, marketing } = getCookiePreferences();
 
     if (analytics) {
-      window.gtag("event", "view_item", {
+      (window as any).gtag("event", "view_item", {
         currency: "EUR",
         value: product.price,
         items: [
@@ -30,7 +30,7 @@ export const trackEvent = {
     }
 
     if (marketing) {
-      window.fbq("track", "ViewContent", {
+      (window as any).fbq("track", "ViewContent", {
         content_ids: [product.id],
         content_name: product.name,
         content_type: "product",
@@ -42,9 +42,9 @@ export const trackEvent = {
 
   addToCart: (product: Product) => {
     const { analytics, marketing } = getCookiePreferences();
-    if (!window.gtag || !window.fbq) return;
+    if (!(window as any).gtag || !(window as any).fbq) return;
     if (analytics) {
-      window.gtag("event", "add_to_cart", {
+      (window as any).gtag("event", "add_to_cart", {
         currency: "EUR",
         value: product.price * (product.quantity || 1),
         items: [
@@ -59,7 +59,7 @@ export const trackEvent = {
     }
 
     if (marketing) {
-      window.fbq("track", "AddToCart", {
+      (window as any).fbq("track", "AddToCart", {
         content_ids: [product.id],
         content_name: product.name,
         content_type: "product",
@@ -77,7 +77,7 @@ export const trackEvent = {
     );
 
     if (analytics) {
-      window.gtag("event", "begin_checkout", {
+      (window as any).gtag("event", "begin_checkout", {
         currency: "EUR",
         value: total,
         items: products.map((product) => ({
@@ -90,7 +90,7 @@ export const trackEvent = {
     }
 
     if (marketing) {
-      window.fbq("track", "InitiateCheckout", {
+      (window as any).fbq("track", "InitiateCheckout", {
         contents: products.map((product) => ({
           id: product.id,
           quantity: product.quantity || 1,
@@ -105,7 +105,7 @@ export const trackEvent = {
     const { analytics, marketing } = getCookiePreferences();
 
     if (analytics) {
-      window.gtag("event", "purchase", {
+      (window as any).gtag("event", "purchase", {
         transaction_id: orderId,
         value: total,
         currency: "EUR",
@@ -119,7 +119,7 @@ export const trackEvent = {
     }
 
     if (marketing) {
-      window.fbq("track", "Purchase", {
+      (window as any).fbq("track", "Purchase", {
         content_ids: products.map((p) => p.id),
         contents: products.map((product) => ({
           id: product.id,

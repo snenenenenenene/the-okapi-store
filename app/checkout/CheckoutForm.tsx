@@ -80,7 +80,7 @@ function CheckoutForm() {
 				);
 				setSelectedRate(cheapestRate);
 
-				const result = await updatePaymentIntent(cart, cheapestRate, paymentIntentId);
+				const result: any = await updatePaymentIntent(cart, cheapestRate, paymentIntentId);
 				if (result?.paymentIntentId) {
 					setPaymentIntentId(result.paymentIntentId);
 				}
@@ -110,7 +110,7 @@ function CheckoutForm() {
 		setSelectedRate(rate);
 		
 
-		const result = await updatePaymentIntent(cart, rate, paymentIntentId);
+		const result : any= await updatePaymentIntent(cart, rate, paymentIntentId);
 		if (result?.paymentIntentId) {
 			setPaymentIntentId(result.paymentIntentId);
 		}
@@ -149,7 +149,7 @@ function CheckoutForm() {
 				throw validationError;
 			}
 
-			const finalPaymentIntent = await updatePaymentIntent(cart, selectedRate, paymentIntentId);
+			const finalPaymentIntent : any= await updatePaymentIntent(cart, selectedRate, paymentIntentId);
 			if (!finalPaymentIntent || !finalPaymentIntent.clientSecret) {
 				throw new Error('Failed to prepare payment. Please try again.');
 			}

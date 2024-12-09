@@ -36,6 +36,7 @@ export class OrderService {
         trackingNumber: printfulOrder?.tracking_number,
         trackingUrl: printfulOrder?.tracking_url,
         orderItems: {
+          // @ts-ignore
           create: cartItems.map((item) => ({
             quantity: item.quantity,
             price: item.price,

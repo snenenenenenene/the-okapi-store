@@ -203,6 +203,7 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "okapi-cart",
+      // @ts-ignore
       getStorage: () => localStorage,
     }
   )

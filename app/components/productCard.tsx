@@ -1,6 +1,5 @@
 'use client';
 
-import { type PrintfulProduct } from "@/types/printful";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
@@ -8,7 +7,7 @@ import { useState } from "react";
 import { formatEuroPrice } from "@/utils/formatters";
 
 interface ProductCardProps {
-  product: PrintfulProduct;
+  product: any;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
