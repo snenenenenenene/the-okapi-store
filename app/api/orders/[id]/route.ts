@@ -129,7 +129,7 @@ export async function GET(
     let printfulDetails = null;
     if (order.stripePaymentId) {
       
-      printfulDetails = await fetchPrintfulOrder(order.stripePaymentId);
+      printfulDetails = await fetchPrintfulOrder(order.stripePaymentId) as any;
     }
 
     
