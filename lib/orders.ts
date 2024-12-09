@@ -77,14 +77,14 @@ export async function createOrder({
 
     
     const order = await prisma.order.create({
-      data: orderData,
+      data: orderData as any,
       include: {
         orderItems: {
           include: {
             product: true
           }
         }
-      }
+      } 
     }).then(order => {
       
       return order;
@@ -92,17 +92,7 @@ export async function createOrder({
       console.error('Error creating DB order:', error);
       throw error;
     })
-
-    
-    
-    
-    
-    
-      productId: item.productId,
-      quantity: item.quantity,
-      price: item.price
-    })));
-    
+   
     return order;
   } catch (error) {
     console.error('=== Error Creating Order ===');
@@ -198,11 +188,6 @@ export async function ensureProductExists(productData: {
 }) {
   
   
-    id: productData.id,
-    name: productData.name,
-    price: productData.price
-  });
-  
   try {
     const product = await prisma.product.upsert({
       where: { id: productData.id },
@@ -214,7 +199,7 @@ export async function ensureProductExists(productData: {
         price: productData.price,
         image: productData.image,
         inStock: 1
-      }
+      } as any
     });
 
     

@@ -27,11 +27,7 @@ function usePaymentIntentHandler() {
       return new Promise((resolve) => {
         timeoutRef.current = setTimeout(async () => {
           try {
-            
-              cart,
-              shippingRate,
-              paymentIntentId,
-            });
+     
 
             const response = await fetch("/api/payment-intent", {
               method: "POST",
