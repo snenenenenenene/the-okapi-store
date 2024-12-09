@@ -42,7 +42,7 @@ export default function OrderSuccessPage() {
         
         // If there's an error, redirect to cart after 5 seconds
         setTimeout(() => {
-          router.push('/cart');
+          router.push('/');
         }, 5000);
       } finally {
         setIsLoading(false);
@@ -58,7 +58,7 @@ export default function OrderSuccessPage() {
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-gray-500 text-sm">Redirecting you to your cart in 5 seconds...</p>
+          <p className="text-gray-500 text-sm">Redirecting you to products in 5 seconds...</p>
         </div>
       </div>
     );

@@ -181,7 +181,7 @@ function useCheckoutFlow() {
 						}
 					},
 				},
-			});
+			}) as any;
 
 			if (confirmError) {
 				throw new Error(confirmError.message);
@@ -246,7 +246,7 @@ function OrderSummary({
 		(sum, item) => sum + (item.price || 0) * item.quantity,
 		0
 	);
-	const shipping = 4.29; // Fixed flat rate shipping
+	const shipping = selectedRate?.rate || 0;
 	
 	// Calculate VAT (23%) on the subtotal and shipping
 	const vatAmount = (subtotal + shipping) * 0.23;
@@ -254,16 +254,8 @@ function OrderSummary({
 	// Calculate final total
 	const total = subtotal + shipping + vatAmount;
 
-	// Format delivery estimate
-	const deliveryDate = new Date();
-	deliveryDate.setDate(deliveryDate.getDate() + 7); // Estimate 7 days
-	const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-US', { 
-		month: 'short',
-		day: 'numeric'
-	});
-
 	return (
-		<div className="bg-white rounded-lg shadow-sm p-6">
+		<div className="p-6 sticky">
 			<h2 className="text-lg font-semibold mb-4">Order Summary</h2>
 			<div className="space-y-4">
 				{items.map((item) => (
@@ -297,8 +289,8 @@ function OrderSummary({
 						<span>€{subtotal.toFixed(2)}</span>
 					</div>
 					<div className="flex justify-between text-sm">
-						<span>Shipping (Flat Rate (Estimated delivery: {formattedDeliveryDate}))</span>
-						<span>€{shipping.toFixed(2)}</span>
+						<span>Shipping</span>
+						<span>{selectedRate ? `€${shipping.toFixed(2)}` : 'To be calculated'}</span>
 					</div>
 					<div className="flex justify-between text-sm">
 						<span>VAT (23%)</span>
@@ -336,7 +328,7 @@ function CheckoutForm() {
 		<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 			<div className="order-2 lg:order-1">
 				<form onSubmit={handleSubmit} className="space-y-8">
-					<div className="bg-white rounded-lg shadow-sm p-6">
+					<div className=" p-6">
 						<h3 className="text-lg font-semibold mb-4">Contact Information</h3>
 						<LinkAuthenticationElement
 							options={{
@@ -350,7 +342,7 @@ function CheckoutForm() {
 						/>
 					</div>
 
-					<div className="bg-white rounded-lg shadow-sm p-6">
+					<div className="p-6">
 						<h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
 						<AddressElement
 							options={{
@@ -370,7 +362,7 @@ function CheckoutForm() {
 					)}
 
 					{shippingRates.length > 0 && (
-						<div className="bg-white rounded-lg shadow-sm p-6">
+						<div className="p-6">
 							<h3 className="text-lg font-semibold mb-4">Payment Details</h3>
 							<PaymentElement />
 						</div>
@@ -402,12 +394,12 @@ function CheckoutForm() {
 				<OrderSummary items={cart} selectedRate={selectedRate} />
 
 				{isCalculatingShipping ? (
-					<div className="bg-white rounded-lg p-6 flex items-center justify-center">
+					<div className="p-6 flex items-center justify-center">
 						<Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
 						<span>Calculating shipping rates...</span>
 					</div>
 				) : shippingRates.length > 0 && (
-					<div className="bg-primary/5 rounded-lg p-6">
+					<div className="rounded-lg p-6">
 						<div className="flex items-center gap-3 mb-4">
 							<Truck className="w-5 h-5 text-primary" />
 							<h3 className="font-medium">Shipping Method</h3>
@@ -416,7 +408,7 @@ function CheckoutForm() {
 							{shippingRates.map((rate) => (
 								<label
 									key={rate.id}
-									className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${selectedRate?.id === rate.id
+									className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${selectedRate?.id === rate.id
 										? 'border-primary bg-primary/5'
 										: 'hover:bg-base-200'
 										}`}
@@ -445,7 +437,7 @@ function CheckoutForm() {
 					</div>
 				)}
 
-				<div className="bg-base-100 rounded-lg p-4 space-y-2">
+				<div className="p-4 space-y-2">
 					<div className="flex items-center gap-2 text-sm text-neutral-600">
 						<Lock className="w-4 h-4" />
 						<span>Secure checkout powered by Stripe</span>
@@ -477,18 +469,19 @@ export default function CheckoutPage() {
 	const amount = Math.round(getTotalPrice() * 100);
 
 	return (
-		<div className="min-h-screen bg-gray-50 py-12">
+		<div className="min-h-screen py-12">
 			<div className="container mx-auto px-4 max-w-6xl">
 				<div className="flex items-center mb-8">
-					<Link href="/cart" className="flex items-center text-sm text-neutral-600 hover:text-neutral-900">
+					<Link href="/" className="flex items-center text-sm text-neutral-600 hover:text-neutral-900">
 						<ArrowLeft className="w-4 h-4 mr-2" />
-						Return to cart
+						Return to products
 					</Link>
 				</div>
 
 				<Elements
 					stripe={stripePromise}
 					options={{
+						// @ts-ignore
 						appearance,
 						mode: 'payment',
 						currency: 'eur',
