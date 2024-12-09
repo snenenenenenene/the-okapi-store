@@ -130,15 +130,6 @@ export async function POST(req: Request) {
         },
       });
 
-      // Create Printful order
-      console.log("Creating Printful order...");
-      const printfulOrder = await createPrintfulOrder(
-        charge,
-        paymentIntent,
-        null
-      );
-      console.log("Printful order created:", printfulOrder);
-
       // Check for existing order
       const existingOrder = await prisma.order.findFirst({
         where: {
@@ -148,17 +139,36 @@ export async function POST(req: Request) {
 
       if (existingOrder) {
         console.log("Order already exists:", existingOrder);
+        
+        // If order exists but no Printful ID, create Printful order
+        if (!existingOrder.printfulId && existingOrder.status === 'pending') {
+          console.log("Creating Printful order for existing order...");
+          const printfulOrder = await createPrintfulOrder(
+            charge,
+            paymentIntent,
+            existingOrder
+          );
+          
+          // Update order with Printful ID and status
+          await prisma.order.update({
+            where: { id: existingOrder.id },
+            data: {
+              printfulId: printfulOrder?.id ? String(printfulOrder.id) : undefined,
+              status: printfulOrder?.id ? 'processing' : 'failed'
+            }
+          });
+        }
+        
         return NextResponse.json({ received: true });
       }
 
-      // Create new order
+      // Create new order only if it doesn't exist
       const order = await prisma.order.create({
         data: {
           userId: user.id,
-          status: "processing",
+          status: "pending",
           total: charge.amount / 100,
           stripePaymentId: paymentIntent.id,
-          printfulId: printfulOrder?.id ? String(printfulOrder.id) : undefined,
           orderItems: {
             create: cartItems.map((item: any) => ({
               quantity: item.quantity,
@@ -187,6 +197,23 @@ export async function POST(req: Request) {
             },
           },
         },
+      });
+
+      // Create Printful order
+      console.log("Creating Printful order for new order...");
+      const printfulOrder = await createPrintfulOrder(
+        charge,
+        paymentIntent,
+        order
+      );
+
+      // Update order with Printful ID and status
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          printfulId: printfulOrder?.id ? String(printfulOrder.id) : undefined,
+          status: printfulOrder?.id ? 'processing' : 'failed'
+        }
       });
 
       console.log("Order created successfully:", order.id);

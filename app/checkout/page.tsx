@@ -31,6 +31,8 @@ interface ShippingRate {
 }
 
 interface ShippingAddress {
+	firstName: string;
+	lastName: string;
 	line1: string;
 	line2?: string;
 	city: string;
@@ -48,8 +50,9 @@ function useCheckoutFlow() {
 	const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
 	const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
 	const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
+	const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
 	const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
-	const { cart, clearCart } = useCartStore();
+	const { cart, clearCart, setCheckoutData } = useCartStore();
 	const router = useRouter();
 
 	const handleAddressChange = async (event: any) => {
@@ -59,17 +62,21 @@ function useCheckoutFlow() {
 
 			try {
 				// Format address from Stripe AddressElement
-				const shippingAddress = {
-					address1: address.address.line1,
-					address2: address.address.line2 || '',
+				const formattedAddress = {
+					firstName: address.name?.split(' ')[0] || '',
+					lastName: address.name?.split(' ').slice(1).join(' ') || '',
+					line1: address.address.line1,
+					line2: address.address.line2 || '',
 					city: address.address.city,
 					state: address.address.state || address.address.city, // Some countries don't have states
 					country: address.address.country,
-					zip: address.address.postal_code
+					postal_code: address.address.postal_code
 				};
 
+				setShippingAddress(formattedAddress);
+
 				console.log('Sending data to shipping calculation:', JSON.stringify({
-					address: shippingAddress,
+					address: formattedAddress,
 					items: cart.map(item => ({
 						variant_id: item.variant_id,
 						quantity: item.quantity,
@@ -85,7 +92,7 @@ function useCheckoutFlow() {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
-						address: shippingAddress,
+						address: formattedAddress,
 						items: cart.map(item => ({
 							variant_id: item.variant_id,
 							quantity: item.quantity,
@@ -135,18 +142,18 @@ function useCheckoutFlow() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-
-		if (!stripe || !elements || !selectedRate) {
-			return;
-		}
-
-		setIsProcessing(true);
-		setError(null);
+		if (!stripe || !elements) return;
 
 		try {
-			const { error: validationError } = await elements.submit();
-			if (validationError) {
-				throw new Error(validationError.message);
+			setIsProcessing(true);
+
+			// Save checkout data before payment
+			setCheckoutData(email, shippingAddress, selectedRate);
+
+			// Submit the Elements instance before confirming payment
+			const { error: submitError } = await elements.submit();
+			if (submitError) {
+				throw new Error(submitError.message);
 			}
 
 			const response = await fetch('/api/payment-intent', {
@@ -162,30 +169,12 @@ function useCheckoutFlow() {
 			const { clientSecret, error: backendError } = await response.json();
 			if (backendError) throw new Error(backendError);
 
-			// Create order first
-			const orderResponse = await fetch('/api/orders', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					paymentIntentId: paymentIntentId,
-					items: cart,
-					shipping: selectedRate,
-				}),
-			});
-
-			if (!orderResponse.ok) {
-				throw new Error('Failed to create order');
-			}
-
-			const { orderId } = await orderResponse.json();
-			console.log('Order created successfully:', orderId);
-
-			// Then confirm payment with order ID in return URL
+			// First confirm payment
 			const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
 				elements,
 				clientSecret,
 				confirmParams: {
-					return_url: `${window.location.origin}/orders/${orderId}`,
+					return_url: `${window.location.origin}/orders/success`,
 					payment_method_data: {
 						billing_details: {
 							email: email,
@@ -198,7 +187,29 @@ function useCheckoutFlow() {
 				throw new Error(confirmError.message);
 			}
 
+			// Only create order if payment succeeded
 			if (paymentIntent.status === 'succeeded') {
+				// Create order
+				const orderResponse = await fetch('/api/orders', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						cart: cart,
+						shippingAddress: shippingAddress,
+						shippingRate: selectedRate,
+						paymentIntentId: paymentIntent.id,
+						email: email,
+					}),
+				});
+
+				if (!orderResponse.ok) {
+					const errorData = await orderResponse.json();
+					throw new Error(errorData.error || 'Failed to create order');
+				}
+
+				const { orderId } = await orderResponse.json();
+				console.log('Order created successfully:', orderId);
+
 				clearCart();
 				router.push(`/orders/${orderId}`);
 			}
@@ -235,7 +246,8 @@ function OrderSummary({
 		0
 	);
 	const shipping = selectedRate ? Number(selectedRate.rate) : 0;
-	const total = subtotal + shipping;
+	const vat = (subtotal + shipping) * 0.23; // Apply 23% VAT to both subtotal and shipping
+	const total = subtotal + shipping + vat;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm p-6">
@@ -265,7 +277,7 @@ function OrderSummary({
 
 				<div className="border-t pt-4 mt-4 space-y-2">
 					<div className="flex justify-between text-sm">
-						<span>Subtotal</span>
+						<span>Subtotal (excl. VAT)</span>
 						<span>€{subtotal.toFixed(2)}</span>
 					</div>
 					{selectedRate && (
@@ -274,8 +286,12 @@ function OrderSummary({
 							<span>€{Number(selectedRate.rate).toFixed(2)}</span>
 						</div>
 					)}
+					<div className="flex justify-between text-sm">
+						<span>VAT (23%)</span>
+						<span>€{vat.toFixed(2)}</span>
+					</div>
 					<div className="flex justify-between font-semibold text-lg pt-2 border-t">
-						<span>Total</span>
+						<span>Total (incl. VAT)</span>
 						<span>€{total.toFixed(2)}</span>
 					</div>
 				</div>

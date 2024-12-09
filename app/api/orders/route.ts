@@ -81,51 +81,42 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
+    const { cart, shippingAddress, shippingRate, paymentIntentId, email } = await request.json();
+
+    if (!email) {
       return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
+        { error: 'Email is required' },
+        { status: 400 }
       );
     }
 
-    const { cart, shippingAddress, shippingRate, paymentIntentId } = await request.json();
-
-    // Find or create user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    // Find or create user as guest
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        role: 'user',
+      }
     });
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Calculate totals
+    // Calculate total (includes shipping)
     const subtotal = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
     const shipping = shippingRate ? Number(shippingRate.rate) : 0;
     const total = subtotal + shipping;
 
-    // Create the order
+    // Create the order in our database
     const order = await prisma.order.create({
       data: {
         userId: user.id,
-        status: 'processing',
+        status: 'pending',
         total: total,
-        subtotal: subtotal,
-        shipping: shipping,
-        shippingAddress: shippingAddress,
-        shippingMethod: shippingRate?.name || 'Standard Shipping',
-        paymentIntentId: paymentIntentId,
+        stripePaymentId: paymentIntentId,
         orderItems: {
           create: cart.map((item: any) => ({
             productId: item.id,
             quantity: item.quantity,
-            price: item.price,
-            size: item.size
+            price: item.price
           }))
         }
       },
@@ -139,7 +130,10 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json(order);
+    // Return immediately without creating Printful order
+    return NextResponse.json({ 
+      orderId: order.id
+    });
   } catch (error) {
     console.error('Error creating order:', error);
     return NextResponse.json(

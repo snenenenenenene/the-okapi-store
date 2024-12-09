@@ -37,18 +37,24 @@ export async function GET() {
         const detailData = await detailResponse.json();
         const variant = detailData.result.sync_variants[0]; // Assuming the first variant
 
+        // Calculate base price (removing VAT from retail price)
+        const retailPrice = parseFloat(variant.retail_price);
+        const basePrice = retailPrice / 1.23; // Remove 23% VAT
+
         return {
           id: item.id,
-          variant_id: variant.id, // Add variant_id
+          variant_id: variant.id,
           name: item.name,
           description: item.description || "No description available",
-          price: parseFloat(variant.retail_price),
+          price: basePrice, // Store the base price without VAT
+          retail_price: retailPrice, // Store the full retail price for reference
           currency: variant.currency,
           image: item.thumbnail_url,
           variants: detailData.result.sync_variants.map((v: any) => ({
             id: v.id,
             name: v.name,
-            price: parseFloat(v.retail_price),
+            price: parseFloat(v.retail_price) / 1.23, // Remove VAT from variant prices
+            retail_price: parseFloat(v.retail_price), // Store full retail price
             size: v.size,
             inStock: v.availability_status === "available",
           })),

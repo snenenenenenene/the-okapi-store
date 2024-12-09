@@ -36,6 +36,9 @@ interface CartStore {
   cart: CartItem[];
   isCartOpen: boolean;
   isLoading: boolean;
+  email: string | null;
+  shippingAddress: any | null;
+  selectedRate: any | null;
   fetchProducts: () => Promise<void>;
   addToCart: (item: CartItem) => void;
   removeFromCart: (productId: string) => void;
@@ -44,6 +47,8 @@ interface CartStore {
   toggleCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  setCheckoutData: (email: string, shippingAddress: any, selectedRate: any) => void;
+  clearCheckoutData: () => void;
   checkout: () => Promise<void>;
 }
 
@@ -54,6 +59,9 @@ export const useCartStore = create<CartStore>()(
       cart: [],
       isCartOpen: false,
       isLoading: false,
+      email: null,
+      shippingAddress: null,
+      selectedRate: null,
 
       fetchProducts: async () => {
         try {
@@ -143,6 +151,12 @@ export const useCartStore = create<CartStore>()(
           0
         ),
 
+      setCheckoutData: (email, shippingAddress, selectedRate) =>
+        set({ email, shippingAddress, selectedRate }),
+
+      clearCheckoutData: () =>
+        set({ email: null, shippingAddress: null, selectedRate: null }),
+
       checkout: async () => {
         const stripe = await stripePromise;
         if (!stripe) throw new Error("Stripe failed to load");
@@ -160,6 +174,9 @@ export const useCartStore = create<CartStore>()(
             },
             body: JSON.stringify({
               items: cartItems,
+              email: get().email,
+              shippingAddress: get().shippingAddress,
+              selectedRate: get().selectedRate,
             }),
           });
 
