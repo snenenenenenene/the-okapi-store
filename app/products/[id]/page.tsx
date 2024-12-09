@@ -231,24 +231,6 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
 
          
             <div className="flex gap-2" ref={sizePickerRef}>
-              <AnimatePresence>
-                {selectedVariant && (
-                  <motion.div
-                    className="absolute h-12 w-12 rounded-full border-2 border-black dark:border-slate-50"
-                    initial={false}
-                    animate={{
-                      x: getIndicatorPosition().x,
-                      y: getIndicatorPosition().y,
-                      opacity: hoveredSize !== null ? 0.5 : 1,
-                    }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 30
-                    }}
-                  />
-                )}
-              </AnimatePresence>
 
               {product?.variants.map((variant, index) => (
                 <motion.button

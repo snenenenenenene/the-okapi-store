@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export function Footer() {
   return (
-    <footer className="footer border-t border-gray-200 font-satoshi">
+    <footer className="footer font-satoshi">
       <div className="container w-full mx-auto px-6">
         <div className="footer-wrapper w-full py-16">
           <Link href="/" className="footer-brand inline-block">

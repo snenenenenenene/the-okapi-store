@@ -325,7 +325,7 @@ function CheckoutForm() {
 	const canProceed = Boolean(email && selectedRate && !isCalculatingShipping);
 
 	return (
-		<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+		<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 dark:text-white">
 			<div className="order-2 lg:order-1">
 				<form onSubmit={handleSubmit} className="space-y-8">
 					<div className=" p-6">
@@ -343,7 +343,7 @@ function CheckoutForm() {
 					</div>
 
 					<div className="p-6">
-						<h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
+						<h3 className="text-lg dark:text-white font-semibold mb-4">Shipping Address</h3>
 						<AddressElement
 							options={{
 								mode: 'shipping',
@@ -372,7 +372,7 @@ function CheckoutForm() {
 						<button
 							type="submit"
 							disabled={!canProceed || isProcessing}
-							className="w-full btn btn-primary btn-lg gap-2"
+							className="w-full gap-2 bg-slate-900 text-white p-4 rounded-lg hover:bg-slate-900/90 transition-colors flex items-center justify-center dark:bg-slate-800 dark:hover:bg-slate-800/90"
 						>
 							{isProcessing ? (
 								<>
